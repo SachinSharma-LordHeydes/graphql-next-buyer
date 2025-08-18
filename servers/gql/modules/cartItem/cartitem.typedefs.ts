@@ -14,4 +14,17 @@ export const cartItemTypeDefs = gql`
     user: User!
     variant: ProductVariant!
   }
+
+  type Query {
+    getCarts: [CartItem!]!
+    getMyCart: [CartItem!]!
+  }
+  type Mutation {
+    addToCart(variantId: String!, quantity: Int!): Boolean!
+
+    updateCartQuantity(cartItemId: ID!, quantity: Int!): Boolean!
+    clearCart(cartItemId: ID!, quantity: Int!): Boolean!
+
+    removeFromCart(variantId: ID!): Boolean!
+  }
 `;

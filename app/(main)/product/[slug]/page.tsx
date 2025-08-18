@@ -1,35 +1,28 @@
 "use client";
 
+import { GET_PRODUCT_BY_SLUG } from "@/client/product/product.queries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery } from "@apollo/client";
 import {
-  ArrowLeft,
   Heart,
+  RotateCcw,
   Share2,
+  Shield,
   ShoppingCart,
   Star,
-  Plus,
-  Minus,
-  Shield,
   Truck,
-  RotateCcw,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  MapPin
 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useState } from "react";
-import Image from "next/image";
 
 // Mock product data (same as main page)
 const mockProducts = [
   {
-    id: 1,
+    id: '1',
     title: "iPhone 15 Pro Max",
     image: "/iphone-15-pro-max.png",
     images: [
@@ -276,20 +269,64 @@ const mockReviews = [
 
 export default function ProductPage() {
   const params = useParams();
-  const router = useRouter();
-  const productId = Number.parseInt(params.id as string);
+  const slug = params.slug as string;
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
   const [addedToWishlist, setAddedToWishlist] = useState(false);
 
-  const product = mockProducts.find((p) => p.id === productId);
+  console.log(slug)
+  
+  const {
+    data: productData,
+    loading: productDataLoading,
+    error: productDataError,
+  } = useQuery(GET_PRODUCT_BY_SLUG, {
+    variables: {
+      slug,
+    },
+  });
 
-  // Note: useEffect removed since we're not importing it
+  if(productDataLoading){
+    return <div>Loading</div>
+  }
 
+  if(productDataError){
+    return <div>Error: {productDataError.message}</div>
+  }
+
+  console.log(productData)
+
+  const product = productData?.getProductBySlug;
+  
   if (!product) {
     return <div>Product not found</div>;
   }
+
+  // Calculate average rating from reviews
+  const averageRating = product.reviews?.length > 0 
+    ? product.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / product.reviews.length 
+    : 0;
+
+  // Get default variant or first variant for pricing
+  const defaultVariant = product.variants?.find((variant: any) => variant.isDefault) || product.variants?.[0];
+  
+  // Check if product is in stock
+  const inStock = defaultVariant ? defaultVariant.stock > 0 : false;
+  
+  // Get seller name
+  const sellerName = product.Brand?.name || 
+    (product.seller ? `${product.seller.firstName || ''} ${product.seller.lastName || ''}`.trim() : 'Unknown Seller');
+
+  // Sort images by sortOrder
+ const sortedImages = (
+  Array.isArray(product.images)
+    ? [...product.images]
+    : product.images
+    ? [product.images]
+    : []
+).sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
 
   const addToCart = () => {
     setAddedToCart(true);
@@ -301,7 +338,7 @@ export default function ProductPage() {
   };
 
   const relatedProducts = mockProducts
-    .filter((p) => p.id !== productId && p.category === product.category)
+    .filter((p) => p.id !== slug && p.category === productData.category)
     .slice(0, 4);
 
   return (
@@ -314,9 +351,9 @@ export default function ProductPage() {
               Home
             </Link>
             <span>/</span>
-            <span className="capitalize">{product.category}</span>
+            <span className="capitalize">{product.Category?.name}</span>
             <span>/</span>
-            <span className="text-gray-900 font-medium">{product.title}</span>
+            <span className="text-gray-900 font-medium">{product.name}</span>
           </div>
         </div>
       </div>
@@ -327,15 +364,15 @@ export default function ProductPage() {
           <div className="space-y-4">
             <div className="aspect-square bg-white rounded-lg overflow-hidden border">
               <img
-                src={product.images[selectedImage] || product.image}
-                alt={product.title}
+                src={sortedImages[selectedImage]?.url || "/placeholder.svg"}
+                alt={sortedImages[selectedImage]?.altText || product.name}
                 className="w-full h-full object-cover"
               />
             </div>
             <div className="flex gap-2 overflow-x-auto">
-              {product.images.map((image, index) => (
+              {sortedImages.map((image: any, index: number) => (
                 <button
-                  key={index}
+                  key={image.id}
                   onClick={() => setSelectedImage(index)}
                   className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
                     selectedImage === index
@@ -344,8 +381,8 @@ export default function ProductPage() {
                   }`}
                 >
                   <img
-                    src={image || "/placeholder.svg"}
-                    alt={`${product.title} ${index + 1}`}
+                    src={image.url || "/placeholder.svg"}
+                    alt={image.altText || `${product.name} ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
                 </button>
@@ -357,16 +394,16 @@ export default function ProductPage() {
           <div className="space-y-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {product.title}
+                {product.name}
               </h1>
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex items-center gap-1">
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
-                  <Star
+                      <Star
                         key={i}
                         className={`w-5 h-5 fill-current ${
-                          i < Math.floor(product.rating)
+                          i < Math.floor(averageRating)
                             ? "text-yellow-400"
                             : "text-gray-300"
                         }`}
@@ -374,47 +411,45 @@ export default function ProductPage() {
                     ))}
                   </div>
                   <span className="text-lg font-medium">
-                    ({product.rating})
+                    ({averageRating.toFixed(1)})
                   </span>
                 </div>
                 <span className="text-gray-600">|</span>
                 <span className="text-green-600 font-medium">
-                  {product.inStock ? "In Stock" : "Out of Stock"}
+                  {inStock ? "In Stock" : "Out of Stock"}
                 </span>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
               <span className="text-3xl font-bold text-gray-900">
-                ${product.price}
+                ${defaultVariant?.price || 'N/A'}
               </span>
-              <span className="text-xl text-gray-500 line-through">
-                ${product.originalPrice}
+              {/* Price comparison will be implemented when sale prices are available */}
+              {/* <span className="text-xl text-gray-500 line-through">
+                ${defaultVariant?.originalPrice}
               </span>
               <Badge variant="destructive" className="text-sm">
-                {Math.round(
-                  ((product.originalPrice - product.price) /
-                    product.originalPrice) *
-                    100
-                )}
-                % OFF
-              </Badge>
+                {discountPercentage}% OFF
+              </Badge> */}
             </div>
 
             <p className="text-gray-700 text-lg leading-relaxed">
-              {product.description}
+              {product?.description}
             </p>
 
             {/* Key Features */}
             <div>
               <h3 className="font-semibold text-lg mb-3">Key Features</h3>
               <ul className="space-y-2">
-                {product.features.slice(0, 4).map((feature, index) => (
+                {/* Features will be displayed when attributes data structure is clarified */}
+                {/* {defaultVariant?.attributes && Object.entries(defaultVariant.attributes).slice(0, 4).map(([key, value], index) => (
                   <li key={index} className="flex items-start gap-2">
                     <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-gray-700">{feature}</span>
+                    <span className="text-gray-700">{key}: {value}</span>
                   </li>
-                ))}
+                ))} */}
+                <li className="text-gray-700">Product features will be displayed here</li>
               </ul>
             </div>
 
@@ -444,7 +479,7 @@ export default function ProductPage() {
                   size="lg"
                   className="flex-1"
                   onClick={addToCart}
-                  disabled={!product.inStock}
+                  // disabled={!product.inStock}
                 >
                   <ShoppingCart className="w-5 h-5 mr-2" />
                   {addedToCart ? "Added to Cart!" : "Add to Cart"}
@@ -481,7 +516,7 @@ export default function ProductPage() {
               </div>
               <div className="flex items-center gap-3">
                 <Shield className="w-5 h-5 text-purple-600" />
-                <span className="text-sm">{product.warranty}</span>
+                <span className="text-sm">{product.warranty || 'Warranty information available'}</span>
               </div>
             </div>
 
@@ -490,7 +525,7 @@ export default function ProductPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-sm text-gray-600">Sold by</span>
-                  <p className="font-medium text-blue-600">{product.seller}</p>
+                  <p className="font-medium text-blue-600">{sellerName}</p>
                 </div>
                 <Button variant="outline" size="sm">
                   View Store
@@ -513,7 +548,7 @@ export default function ProductPage() {
               <Card>
                 <CardContent className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {Object.entries(product.specifications).map(
+                    {/* {Object.entries(product?.specifications).map(
                       ([key, value]) => (
                         <div
                           key={key}
@@ -525,7 +560,7 @@ export default function ProductPage() {
                           <span className="text-gray-900">{value}</span>
                         </div>
                       )
-                    )}
+                    )} */}
                   </div>
                 </CardContent>
               </Card>
@@ -535,16 +570,16 @@ export default function ProductPage() {
               <div className="space-y-6">
                 <div className="flex items-center gap-6 mb-6">
                   <div className="text-center">
-                    <div className="text-4xl font-bold">{product.rating}</div>
+                    {/* <div className="text-4xl font-bold">{product.rating}</div> */}
                     <div className="flex justify-center mb-1">
                       {[...Array(5)].map((_, i) => (
                         <Star
                           key={i}
-                          className={`w-5 h-5 fill-current ${
-                            i < Math.floor(product.rating)
-                              ? "text-yellow-400"
-                              : "text-gray-300"
-                          }`}
+                          // className={`w-5 h-5 fill-current ${
+                          //   i < Math.floor(product.rating)
+                          //     ? "text-yellow-400"
+                          //     : "text-gray-300"
+                          // }`}
                         />
                       ))}
                     </div>
@@ -595,12 +630,12 @@ export default function ProductPage() {
               <Card>
                 <CardContent className="p-6">
                   <ul className="space-y-3">
-                    {product.features.map((feature, index) => (
+                    {/* {product.features.map((feature, index) => (
                       <li key={index} className="flex items-start gap-3">
                         <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
                         <span className="text-gray-700">{feature}</span>
                       </li>
-                    ))}
+                    ))} */}
                   </ul>
                 </CardContent>
               </Card>

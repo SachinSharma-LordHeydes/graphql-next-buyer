@@ -62,6 +62,66 @@ export const GET_PRODUCT = gql`
   }
 `;
 
+export const GET_PRODUCT_BY_SLUG = gql`
+  query GetProductBySlug($slug: String!) {
+    getProductBySlug(slug: $slug) {
+      id
+      name
+      description
+      slug
+      status
+      # salePrice
+      # saleStart
+      # saleEnd
+      returnPolicy
+      warranty
+      category {
+        id
+        name
+        slug
+        parent {
+          id
+          name
+        }
+      }
+      brand {
+        id
+        name
+        slug
+      }
+      seller {
+        id
+        firstName
+        lastName
+      }
+      images {
+        id
+        url
+        altText
+        sortOrder
+        type
+      }
+      variants {
+        id
+        price
+        stock
+        isDefault
+        attributes
+      }
+      reviews {
+        id
+        rating
+        comment
+        createdAt
+        user {
+          firstName
+          lastName
+        }
+      }
+    }
+  }
+`;
+
 export const GET_PRODUCTS = gql`
   query GetProducts {
     getProducts {
@@ -74,6 +134,7 @@ export const GET_PRODUCTS = gql`
       }
       status
       variants {
+        id
         price
       }
       reviews {

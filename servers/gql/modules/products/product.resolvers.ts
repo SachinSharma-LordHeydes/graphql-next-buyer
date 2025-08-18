@@ -1,5 +1,4 @@
 import { PrismaClient } from "@/app/generated/prisma";
-import { requireAuth } from "../../auth/auth";
 import { GraphQLContext } from "../../context";
 
 const prisma = new PrismaClient();
@@ -7,8 +6,6 @@ const prisma = new PrismaClient();
 export const productResolvers = {
   Query: {
     getProducts: async (_: any, __: any, ctx: GraphQLContext) => {
-      requireAuth(ctx);
-
       return prisma.product.findMany({
         include: {
           seller: true,
@@ -34,14 +31,41 @@ export const productResolvers = {
       { productId }: { productId: string },
       ctx: GraphQLContext
     ) => {
-      requireAuth(ctx);
-
       if (!productId) throw new Error("Product id is required");
 
       return prisma.product.findUnique({
         where: {
           id: productId,
         },
+        include: {
+          seller: true,
+          variants: {
+            include: {
+              specifications: true,
+            },
+          },
+          images: true,
+          reviews: true,
+          category: {
+            include: {
+              children: true,
+              parent: true,
+            },
+          },
+          brand: true,
+          wishlistItems: true,
+        },
+      });
+    },
+    getProductBySlug: async (
+      _: any,
+      { slug }: { slug: string },
+      ctx: GraphQLContext
+    ) => {
+      if (!slug) throw new Error("slug id is required");
+
+      return prisma.product.findUnique({
+        where: { slug },
         include: {
           seller: true,
           variants: {

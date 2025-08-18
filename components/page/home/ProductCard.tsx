@@ -1,226 +1,282 @@
 "use client";
 
+import { useCart } from "@/app/(main)/page";
+import { ADD_TO_CART, REMOVE_FROM_CART } from "@/client/caart/cart.mutations";
+import { GET_CART_PRODUCT_IDS } from "@/client/caart/cart.queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Check, Star } from "lucide-react";
+import { useMutation } from "@apollo/client";
+import { Check, ShoppingCart, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
-const mockProducts = [
-  {
-    id: 1,
-    title: "iPhone 15 Pro Max",
-    image: "/iphone-15-pro-max.png",
-    rating: 4.5,
-    price: 1199,
-    originalPrice: 1299,
-    category: "electronics",
-  },
-  {
-    id: 2,
-    title: "Samsung Galaxy S24 Ultra",
-    image: "/samsung-galaxy-s24-ultra.png",
-    rating: 4.4,
-    price: 1099,
-    originalPrice: 1199,
-    category: "electronics",
-  },
-  {
-    id: 3,
-    title: "MacBook Pro M3",
-    image: "/macbook-pro-m3.png",
-    rating: 4.8,
-    price: 1999,
-    originalPrice: 2199,
-    category: "electronics",
-  },
-  {
-    id: 4,
-    title: "Nike Air Max 270",
-    image: "/nike-air-max-270.png",
-    rating: 4.3,
-    price: 150,
-    originalPrice: 180,
-    category: "fashion",
-  },
-  {
-    id: 5,
-    title: "Sony WH-1000XM5",
-    image: "/sony-wh-1000xm5.png",
-    rating: 4.6,
-    price: 399,
-    originalPrice: 449,
-    category: "electronics",
-  },
-  {
-    id: 6,
-    title: "Adidas Ultraboost 22",
-    image: "/adidas-ultraboost-22.png",
-    rating: 4.4,
-    price: 180,
-    originalPrice: 220,
-    category: "fashion",
-  },
-];
-const ProductCard = ({ product }: { product: (typeof mockProducts)[0] }) => {
-  const [cartCount, setCartCount] = useState(0);
-  const [addedToCart, setAddedToCart] = useState<number[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<
-    (typeof mockProducts)[0] | null
-  >(null);
+// Types remain the same
+type ProductImage = { url: string; altText?: string | null };
+type ProductVariant = { id: string; price: string };
+type ProductReview = { rating?: number | null };
 
-  const addToCart = (productId: number) => {
-    if (!addedToCart.includes(productId)) {
-      setCartCount((prev) => prev + 1);
-      setAddedToCart((prev) => [...prev, productId]);
+export interface IProduct {
+  id: string;
+  name: string;
+  slug?: string;
+  images?: ProductImage[];
+  variants?: ProductVariant[];
+  reviews?: ProductReview[];
+}
+
+type CartStatus =
+  | "idle"
+  | "adding"
+  | "removing"
+  | "added"
+  | "removed"
+  | "error";
+
+const ProductCard: React.FC<{ product: IProduct }> = ({ product }) => {
+  const cartCtx = useCart?.() as
+    | { cartItems?: Set<string>; loading?: boolean }
+    | undefined;
+  const cartItems = cartCtx?.cartItems ?? new Set<string>();
+  const cartLoading = !!cartCtx?.loading;
+
+  const [status, setStatus] = useState<CartStatus>("idle");
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Optimistic updates - immediately update UI before server responds
+  const [optimisticCartItems, setOptimisticCartItems] = useState<Set<string>>(
+    new Set()
+  );
+
+  // Update optimistic state when real cart data changes
+  useEffect(() => {
+    setOptimisticCartItems(cartItems);
+  }, [cartItems]);
+
+  const [addToCart] = useMutation(ADD_TO_CART, {
+    refetchQueries: [{ query: GET_CART_PRODUCT_IDS }],
+    onCompleted: () => {
+      setStatus("added");
+      setTimeout(() => setStatus("idle"), 2000);
+    },
+    onError: (error) => {
+      console.error("Add to cart error:", error);
+      setStatus("error");
+      // Revert optimistic update
+      setOptimisticCartItems(cartItems);
+      setTimeout(() => setStatus("idle"), 2000);
+    },
+  });
+
+  const [removeFromCart] = useMutation(REMOVE_FROM_CART, {
+    refetchQueries: [{ query: GET_CART_PRODUCT_IDS }],
+    onCompleted: () => {
+      setStatus("removed");
+      setTimeout(() => setStatus("idle"), 2000);
+    },
+    onError: (error) => {
+      console.error("Remove from cart error:", error);
+      setStatus("error");
+      // Revert optimistic update
+      setOptimisticCartItems(cartItems);
+      setTimeout(() => setStatus("idle"), 2000);
+    },
+  });
+
+  // Memoize computed values
+  const productData = useMemo(() => {
+    const imageUrl = product.images?.[0]?.url ?? "/placeholder.svg";
+    const imageAlt =
+      product.images?.[0]?.altText ?? product.name ?? "Product image";
+    const variantId = product.variants?.[0]?.id;
+    const price = parseFloat(product.variants?.[0]?.price ?? "0");
+
+    const avgRating =
+      product.reviews && product.reviews.length
+        ? product.reviews.reduce((s, r) => s + (r.rating ?? 0), 0) /
+          product.reviews.length
+        : 0;
+
+    return { imageUrl, imageAlt, variantId, price, avgRating };
+  }, [product]);
+
+  // console.log("product data-->", productData);
+
+  const isInCart = optimisticCartItems.has(product.id);
+  const isLoading = status === "adding" || status === "removing" || cartLoading;
+  const isDisabled = !productData.variantId || isLoading;
+
+  const handleAdd = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (isDisabled) return;
+
+      // Optimistic update - immediately show as added
+      setOptimisticCartItems((prev) => new Set([...prev, product.id]));
+      setStatus("adding");
+
+      try {
+        await addToCart({
+          variables: {
+            variantId: productData.variantId,
+            quantity: 1,
+          },
+        });
+      } catch (err) {
+        // Error handling is done in onError callback
+      }
+    },
+    [isDisabled, addToCart, productData.variantId, product.id]
+  );
+
+  const handleRemove = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (isDisabled) return;
+
+      // Optimistic update - immediately show as removed
+      const newSet = new Set(optimisticCartItems);
+      newSet.delete(product.id);
+      setOptimisticCartItems(newSet);
+      setStatus("removing");
+
+      try {
+        await removeFromCart({
+          variables: { variantId: productData.variantId },
+        });
+      } catch (err) {
+        // Error handling is done in onError callback
+      }
+    },
+    [
+      isDisabled,
+      removeFromCart,
+      productData.variantId,
+      product.id,
+      optimisticCartItems,
+    ]
+  );
+
+  // Button content based on status
+  const getButtonContent = () => {
+    switch (status) {
+      case "adding":
+        return {
+          text: "Adding...",
+          icon: <ShoppingCart className="w-4 h-4 animate-spin" />,
+        };
+      case "removing":
+        return {
+          text: "Removing...",
+          icon: <X className="w-4 h-4 animate-spin" />,
+        };
+      case "added":
+        return { text: "Added!", icon: <Check className="w-4 h-4" /> };
+      case "removed":
+        return { text: "Removed!", icon: <Check className="w-4 h-4" /> };
+      case "error":
+        return { text: "Try again", icon: <X className="w-4 h-4" /> };
+      default:
+        if (isInCart) {
+          return {
+            text: isHovered ? "Remove" : "In Cart",
+            icon: <Check className="w-4 h-4" />,
+          };
+        }
+        return {
+          text: "Add to Cart",
+          icon: <ShoppingCart className="w-4 h-4" />,
+        };
     }
   };
 
+  const buttonContent = getButtonContent();
+
   return (
-    <Link href={`/product/${product.id}`}>
-      <Card className="group hover:shadow-lg transition-shadow duration-300 cursor-pointer h-full">
-        <CardContent className="p-2 sm:p-3 md:p-4 h-full flex flex-col">
-          <div className="aspect-square mb-2 sm:mb-3 overflow-hidden rounded-lg bg-gray-100">
-            <img
-              src={product.image || "/placeholder.svg"}
-              alt={product.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+    <Link href={`/product/${product.slug}`} className="block h-full group">
+      <Card className="h-full hover:shadow-lg transition-all duration-300 group-hover:scale-[1.02] border-0 shadow-sm">
+        <CardContent className="p-3 flex flex-col h-full">
+          {/* Image container with overlay effects */}
+          <div className="aspect-square mb-3 overflow-hidden rounded-lg bg-gray-50 relative group">
+            <Image
+              src={productData.imageUrl}
+              alt={productData.imageAlt}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              priority={false}
             />
-          </div>
-          <div className="flex-1 flex flex-col">
-            <h3 className="font-medium text-xs sm:text-sm mb-1 sm:mb-2 line-clamp-2 leading-tight">
-              {product.title}
-            </h3>
-            <div className="flex items-center gap-1 mb-1 sm:mb-2">
-              <div className="flex">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`w-3 h-3 sm:w-4 sm:h-4 fill-current ${
-                      i < Math.floor(product.rating)
-                        ? "text-yellow-400"
-                        : "text-gray-300"
-                    }`}
-                  />
-                ))}
+
+            {/* Quick action overlay */}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+
+            {/* Status indicator */}
+            {(status === "added" || status === "removed") && (
+              <div className="absolute top-2 right-2 bg-gray-500 text-white rounded-full p-1 animate-pulse">
+                <Check className="w-4 h-4" />
               </div>
-              <span className="text-xs sm:text-sm text-gray-600">
-                ({product.rating})
-              </span>
+            )}
+          </div>
+
+          <div className="flex-1 flex flex-col justify-between">
+            <div>
+              <h3 className="font-medium text-sm mb-2 line-clamp-2 group-hover:text--600 text-black transition-colors">
+                {product.name}
+              </h3>
+
+              {productData.avgRating > 0 && (
+                <div className="flex items-center gap-1 text-xs text-gray-600 mb-2">
+                  <div className="flex">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <span
+                        key={i}
+                        className={
+                          i < Math.round(productData.avgRating)
+                            ? "text-yellow-400"
+                            : "text-gray-300"
+                        }
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                  <span>({productData.avgRating.toFixed(1)})</span>
+                </div>
+              )}
+
+              <div className="font-bold text-lg text-gray-600">
+                ${productData.price.toFixed(2)}
+              </div>
             </div>
-            <div className="flex items-center gap-1 sm:gap-2 mb-2 sm:mb-3">
-              <span className="font-bold text-sm sm:text-base md:text-lg">
-                ${product.price}
-              </span>
-              <span className="text-xs sm:text-sm text-gray-500 line-through">
-                ${product.originalPrice}
-              </span>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 mt-auto">
+
+            {/* Enhanced cart button */}
+            <div className="mt-3">
               <Button
                 size="sm"
-                className="flex-1 text-xs sm:text-sm h-8 sm:h-9"
-                onClick={(e) => {
-                  e.preventDefault();
-                  addToCart(product.id);
-                }}
-                disabled={addedToCart.includes(product.id)}
+                variant={isInCart ? "outline" : "default"}
+                onClick={isInCart ? handleRemove : handleAdd}
+                disabled={isDisabled}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                className={`w-full transition-all duration-200 transform active:scale-95 ${
+                  isInCart
+                    ? "border-gray-500 text-gray-600 hover:bg-red-50 hover:border-red-500 hover:text-red-600"
+                    : "bg-white hover:bg-gray-200 text-black "
+                } ${status === "added" ? "bg-gray-500 hover:bg-gray-600" : ""}
+                ${status === "removed" ? "bg-gray-500 hover:bg-gray-600" : ""}
+                ${status === "error" ? "bg-red-500 hover:bg-red-600" : ""}`}
               >
-                {addedToCart.includes(product.id) ? (
-                  <>
-                    <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                    <span className="hidden xs:inline">Added</span>
-                    <span className="xs:hidden">✓</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="hidden xs:inline">Add to Cart</span>
-                    <span className="xs:hidden">Add</span>
-                  </>
-                )}
+                <span className="flex items-center justify-center gap-2 min-w-[100px]">
+                  {buttonContent.icon}
+                  <span className="transition-all duration-200">
+                    {buttonContent.text}
+                  </span>
+                </span>
               </Button>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 sm:flex-none text-xs sm:text-sm h-8 sm:h-9"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setSelectedProduct(product);
-                    }}
-                  >
-                    <span className="hidden sm:inline">Quick View</span>
-                    <span className="sm:hidden">View</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="mx-3 sm:mx-4 max-w-xs sm:max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle className="text-sm sm:text-lg">
-                      {selectedProduct?.title}
-                    </DialogTitle>
-                  </DialogHeader>
-                  {selectedProduct && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                        <img
-                          src={selectedProduct.image || "/placeholder.svg"}
-                          alt={selectedProduct.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="space-y-3 sm:space-y-4">
-                        <div className="flex items-center gap-1">
-                          <div className="flex">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`w-4 h-4 sm:w-5 sm:h-5 fill-current ${
-                                  i < Math.floor(selectedProduct.rating)
-                                    ? "text-yellow-400"
-                                    : "text-gray-300"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-sm sm:text-lg">
-                            ({selectedProduct.rating})
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <span className="font-bold text-lg sm:text-2xl">
-                            ${selectedProduct.price}
-                          </span>
-                          <span className="text-sm sm:text-lg text-gray-500 line-through">
-                            ${selectedProduct.originalPrice}
-                          </span>
-                        </div>
-                        <Button
-                          className="w-full h-10 sm:h-12"
-                          onClick={() => addToCart(selectedProduct.id)}
-                          disabled={addedToCart.includes(selectedProduct.id)}
-                        >
-                          {addedToCart.includes(selectedProduct.id) ? (
-                            <>
-                              <Check className="w-4 h-4 mr-2" />
-                              Added to Cart
-                            </>
-                          ) : (
-                            "Add to Cart"
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </DialogContent>
-              </Dialog>
             </div>
           </div>
         </CardContent>

@@ -23,9 +23,9 @@ export const productTypeDefs = gql`
     variants: [ProductVariant!]
     images: [ProductImage!]
     reviews: [Review!]
-    Category: Category
+    category: Category
     categoryId: String
-    Brand: Brand
+    brand: Brand
     brandId: String
     WishlistItem: [WishlistItem!]
     returnPolicy: String
@@ -48,6 +48,7 @@ export const productTypeDefs = gql`
   type Query {
     getProducts: [Product!]!
     getProduct(productId: ID!): Product!
+    getProductBySlug(slug: String!): Product!
   }
 
   type Mutation {

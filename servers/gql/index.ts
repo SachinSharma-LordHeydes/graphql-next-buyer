@@ -26,6 +26,7 @@ import { shipmentTypeDefs } from "./modules/shipment/shipment.typeDefs";
 import { userTypeDefs } from "./modules/user/user.typeDefs";
 import { wishlistTypeDefs } from "./modules/wishlist/wishlist.typeDefs";
 import { wishlistItemTypeDefs } from "./modules/wishlistItem/wishlistItem.typeDefs";
+import { cartItemResolvers } from "./modules/cartItem/cart.resolvers";
 
 const rootTypeDefs = gql`
   type Query {
@@ -67,6 +68,7 @@ const resolvers = mergeResolvers([
   productResolvers,
   categoryResolvers,
   categorySpecificationResolvers,
+  cartItemResolvers
 ]);
 
 export const schema = makeExecutableSchema({ typeDefs, resolvers });

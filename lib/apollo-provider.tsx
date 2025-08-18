@@ -32,7 +32,23 @@ function ApolloWrapper({ children }: { children: React.ReactNode }) {
               getProducts: {
                 merge: false,
               },
+              getMyCart: {
+                merge: false,
+              },
               categories: {
+                merge: false,
+              },
+            },
+          },
+          Product: {
+            fields: {
+              reviews: {
+                merge: false,
+              },
+              images: {
+                merge: false,
+              },
+              variants: {
                 merge: false,
               },
             },
@@ -43,6 +59,11 @@ function ApolloWrapper({ children }: { children: React.ReactNode }) {
         watchQuery: {
           errorPolicy: 'all',
           notifyOnNetworkStatusChange: false,
+          fetchPolicy: 'cache-first', // Default to cache-first for better performance
+        },
+        query: {
+          errorPolicy: 'all',
+          fetchPolicy: 'cache-first',
         },
       },
     });

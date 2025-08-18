@@ -12,7 +12,9 @@ export interface GraphQLContext {
   } | null;
 }
 
-export async function createContext(request: NextRequest): Promise<GraphQLContext> {
+export async function createContext(
+  request: NextRequest
+): Promise<GraphQLContext> {
   try {
     const { userId } = await getAuth(request);
 

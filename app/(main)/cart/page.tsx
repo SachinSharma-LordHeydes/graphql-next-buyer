@@ -7,6 +7,8 @@ import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Tag } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import Image from "next/image";
+import { useMutation } from "@apollo/client";
+import { REMOVE_FROM_CART } from "@/client/caart/cart.mutations";
 
 // Mock cart data based on Prisma schema
 const mockCartItems = [
@@ -159,6 +161,8 @@ export default function CartPage() {
   const [cartItems, setCartItems] = useState(mockCartItems);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [removeFromCartMutation] = useMutation(REMOVE_FROM_CART);
+
   const formatPrice = (priceInCents: number) => {
     return `$${(priceInCents / 100).toFixed(2)}`;
   };
@@ -178,8 +182,16 @@ export default function CartPage() {
     );
   };
 
-  const removeItem = (cartId: string) => {
-    setCartItems(items => items.filter(item => item.id !== cartId));
+  const removeItem = async (cartId: string) => {
+    try {
+      await removeFromCartMutation({
+        variables: { cartId },
+      });
+      
+      setCartItems(items => items.filter(item => item.id !== cartId));
+    } catch (error) {
+      console.error('Error removing item:', error);
+    }
   };
 
   const subtotal = cartItems.reduce((sum, item) => 

@@ -8,8 +8,11 @@ const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
 export async function POST(req: Request): Promise<NextResponse> {
   try {
-
-    console.log("webhook secret-->",WEBHOOK_SECRET)
+    if (!WEBHOOK_SECRET) {
+      console.log("webhook secret not avilable");
+      throw new Error("webhook secret not avilable");
+    }
+    console.log("webhook secret-->", WEBHOOK_SECRET);
 
     const payload = await req.text();
     const rawHeaders = await headers();
@@ -42,7 +45,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       await prisma.user.upsert({
         where: { id: clerkId },
         update: { email, role },
-        create: { clerkId, email, role ,firstName},
+        create: { clerkId, email, role, firstName },
       });
 
       console.log(
