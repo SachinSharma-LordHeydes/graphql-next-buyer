@@ -1,12 +1,17 @@
 "use client";
 
+import { useCart } from "@/app/(main)/page";
+import { ADD_TO_CART, REMOVE_FROM_CART } from "@/client/caart/cart.mutations";
+import { GET_CART_PRODUCT_IDS } from "@/client/caart/cart.queries";
 import { GET_PRODUCT_BY_SLUG } from "@/client/product/product.queries";
+import ProductPageSkeleton from "@/components/page/product/ProductPageSkeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useQuery } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import {
+  Check,
   Heart,
   RotateCcw,
   Share2,
@@ -14,15 +19,16 @@ import {
   ShoppingCart,
   Star,
   Truck,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-// Mock product data (same as main page)
-const mockProducts = [
+// Mock data constants (kept inline for simplicity, can be moved to separate file if data grows)
+const MOCK_PRODUCTS = [
   {
-    id: '1',
+    id: "1",
     title: "iPhone 15 Pro Max",
     image: "/iphone-15-pro-max.png",
     images: [
@@ -267,16 +273,57 @@ const mockReviews = [
   },
 ];
 
+type CartStatus =
+  | "idle"
+  | "adding"
+  | "removing"
+  | "added"
+  | "removed"
+  | "error";
+
 export default function ProductPage() {
   const params = useParams();
   const slug = params.slug as string;
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [addedToCart, setAddedToCart] = useState(false);
   const [addedToWishlist, setAddedToWishlist] = useState(false);
+  const [status, setStatus] = useState<CartStatus>("idle");
+  const [isHovered, setIsHovered] = useState(false);
 
-  console.log(slug)
-  
+  const { data: cartData, loading: cartLoading } = useQuery(
+    GET_CART_PRODUCT_IDS,
+    {
+      fetchPolicy: "cache-and-network",
+      errorPolicy: "all",
+      notifyOnNetworkStatusChange: false,
+    }
+  );
+
+  const cartProductIds = useMemo(() => {
+    if (!cartData?.getMyCart) return new Set<string>();
+    return new Set(
+      cartData.getMyCart.map((item: any) => item.variant.product.id)
+    );
+  }, [cartData?.getMyCart]);
+
+  const cartCtx = useCart?.() as
+    | { cartItems?: Set<string>; loading?: boolean }
+    | undefined;
+
+  const cartItems =
+    cartProductIds.size > 0
+      ? cartProductIds
+      : cartCtx?.cartItems ?? new Set<string>();
+  const finalCartLoading = cartLoading || !!cartCtx?.loading;
+
+  const [optimisticCartItems, setOptimisticCartItems] = useState<Set<string>>(
+    new Set()
+  );
+
+  useEffect(() => {
+    setOptimisticCartItems(cartItems);
+  }, [cartItems]);
+
   const {
     data: productData,
     loading: productDataLoading,
@@ -287,59 +334,221 @@ export default function ProductPage() {
     },
   });
 
-  if(productDataLoading){
-    return <div>Loading</div>
-  }
+  const [addToCart] = useMutation(ADD_TO_CART, {
+    refetchQueries: [{ query: GET_CART_PRODUCT_IDS }],
+    onCompleted: () => {
+      setStatus("added");
+      setTimeout(() => setStatus("idle"), 2000);
+    },
+    onError: (error) => {
+      console.error("Add to cart error:", error);
+      setStatus("error");
+      // Revert optimistic update
+      setOptimisticCartItems(cartItems);
+      setTimeout(() => setStatus("idle"), 2000);
+    },
+  });
 
-  if(productDataError){
-    return <div>Error: {productDataError.message}</div>
-  }
+  const [removeFromCart] = useMutation(REMOVE_FROM_CART, {
+    refetchQueries: [{ query: GET_CART_PRODUCT_IDS }],
+    onCompleted: () => {
+      setStatus("removed");
+      setTimeout(() => setStatus("idle"), 2000);
+    },
+    onError: (error) => {
+      console.error("Remove from cart error:", error);
+      setStatus("error");
+      // Revert optimistic update
+      setOptimisticCartItems(cartItems);
+      setTimeout(() => setStatus("idle"), 2000);
+    },
+  });
 
-  console.log(productData)
-
+  // Extract product data safely
   const product = productData?.getProductBySlug;
-  
-  if (!product) {
-    return <div>Product not found</div>;
-  }
 
-  // Calculate average rating from reviews
-  const averageRating = product.reviews?.length > 0 
-    ? product.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / product.reviews.length 
-    : 0;
+  // Define these variables outside of conditional rendering
+  // Use default/fallback values when data isn't available
+  const averageRating = useMemo(() => {
+    if (!product?.reviews?.length) return 0;
+    return (
+      product.reviews.reduce(
+        (sum: number, review: any) => sum + review.rating,
+        0
+      ) / product.reviews.length
+    );
+  }, [product?.reviews]);
 
-  // Get default variant or first variant for pricing
-  const defaultVariant = product.variants?.find((variant: any) => variant.isDefault) || product.variants?.[0];
-  
-  // Check if product is in stock
-  const inStock = defaultVariant ? defaultVariant.stock > 0 : false;
-  
-  // Get seller name
-  const sellerName = product.Brand?.name || 
-    (product.seller ? `${product.seller.firstName || ''} ${product.seller.lastName || ''}`.trim() : 'Unknown Seller');
+  const defaultVariant = useMemo(() => {
+    if (!product?.variants) return null;
+    return (
+      product.variants.find((variant: any) => variant.isDefault) ||
+      product.variants[0]
+    );
+  }, [product?.variants]);
 
-  // Sort images by sortOrder
- const sortedImages = (
-  Array.isArray(product.images)
-    ? [...product.images]
-    : product.images
-    ? [product.images]
-    : []
-).sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const inStock = useMemo(() => {
+    return defaultVariant ? defaultVariant.stock > 0 : false;
+  }, [defaultVariant]);
 
+  const sellerName = useMemo(() => {
+    if (!product) return "Unknown Seller";
+    return (
+      product.brand?.name ||
+      (product.seller
+        ? `${product.seller.firstName || ""} ${
+            product.seller.lastName || ""
+          }`.trim()
+        : "Unknown Seller")
+    );
+  }, [product]);
 
-  const addToCart = () => {
-    setAddedToCart(true);
-    setTimeout(() => setAddedToCart(false), 2000);
+  const sortedImages = useMemo(() => {
+    if (!product?.images) return [];
+    const images = Array.isArray(product.images)
+      ? [...product.images]
+      : [product.images];
+    return images.sort(
+      (a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+    );
+  }, [product?.images]);
+
+  // Memoize computed cart values - this hook will now ALWAYS run
+  const productCartData = useMemo(() => {
+    const variantId = defaultVariant?.id;
+    const isInCart = product
+      ? optimisticCartItems.has(product.id || "")
+      : false;
+    const isLoading =
+      status === "adding" || status === "removing" || finalCartLoading;
+    const isDisabled = !variantId || isLoading || !inStock;
+
+    return { variantId, isInCart, isLoading, isDisabled };
+  }, [
+    defaultVariant?.id,
+    optimisticCartItems,
+    product?.id,
+    status,
+    finalCartLoading,
+    inStock,
+  ]);
+
+  const handleAdd = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (productCartData.isDisabled) return;
+
+      // Optimistic update - immediately show as added
+      setOptimisticCartItems((prev) => new Set([...prev, product.id]));
+      setStatus("adding");
+
+      try {
+        await addToCart({
+          variables: {
+            variantId: productCartData.variantId,
+            quantity: quantity,
+          },
+        });
+      } catch (err) {
+        // Error handling is done in onError callback
+      }
+    },
+    [
+      productCartData.isDisabled,
+      productCartData.variantId,
+      addToCart,
+      product?.id,
+      quantity,
+    ]
+  );
+
+  const handleRemove = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (productCartData.isDisabled) return;
+
+      // Optimistic update - immediately show as removed
+      const newSet = new Set(optimisticCartItems);
+      newSet.delete(product?.id || "");
+      setOptimisticCartItems(newSet);
+      setStatus("removing");
+
+      try {
+        await removeFromCart({
+          variables: { variantId: productCartData.variantId },
+        });
+      } catch (err) {
+        // Error handling is done in onError callback
+      }
+    },
+    [
+      productCartData.isDisabled,
+      removeFromCart,
+      productCartData.variantId,
+      product?.id,
+      optimisticCartItems,
+    ]
+  );
+
+  // Button content based on status
+  const getButtonContent = () => {
+    switch (status) {
+      case "adding":
+        return {
+          text: "Adding...",
+          icon: <ShoppingCart className="w-5 h-5 animate-spin" />,
+        };
+      case "removing":
+        return {
+          text: "Removing...",
+          icon: <X className="w-5 h-5 animate-spin" />,
+        };
+      case "added":
+        return { text: "Added!", icon: <Check className="w-5 h-5" /> };
+      case "removed":
+        return { text: "Removed!", icon: <Check className="w-5 h-5" /> };
+      case "error":
+        return { text: "Try again", icon: <X className="w-5 h-5" /> };
+      default:
+        if (productCartData.isInCart) {
+          return {
+            text: isHovered ? "Remove from Cart" : "In Cart",
+            icon: <Check className="w-5 h-5" />,
+          };
+        }
+        return {
+          text: "Add to Cart",
+          icon: <ShoppingCart className="w-5 h-5" />,
+        };
+    }
   };
+
+  const buttonContent = getButtonContent();
 
   const toggleWishlist = () => {
     setAddedToWishlist(!addedToWishlist);
   };
 
-  const relatedProducts = mockProducts
-    .filter((p) => p.id !== slug && p.category === productData.category)
-    .slice(0, 4);
+  const relatedProducts = MOCK_PRODUCTS.filter(
+    (p) => p.id !== slug && p.category === productData?.category
+  ).slice(0, 4);
+
+  // Handle loading and error states after all hooks have been called
+  if (productDataLoading) {
+    return <ProductPageSkeleton />;
+  }
+
+  if (productDataError) {
+    return <div>Error: {productDataError.message}</div>;
+  }
+
+  if (!product) {
+    return <div>Product not found</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -351,7 +560,7 @@ export default function ProductPage() {
               Home
             </Link>
             <span>/</span>
-            <span className="capitalize">{product.Category?.name}</span>
+            <span className="capitalize">{product.category?.name}</span>
             <span>/</span>
             <span className="text-gray-900 font-medium">{product.name}</span>
           </div>
@@ -423,7 +632,7 @@ export default function ProductPage() {
 
             <div className="flex items-center gap-4">
               <span className="text-3xl font-bold text-gray-900">
-                ${defaultVariant?.price || 'N/A'}
+                ${defaultVariant?.price || "N/A"}
               </span>
               {/* Price comparison will be implemented when sale prices are available */}
               {/* <span className="text-xl text-gray-500 line-through">
@@ -449,7 +658,9 @@ export default function ProductPage() {
                     <span className="text-gray-700">{key}: {value}</span>
                   </li>
                 ))} */}
-                <li className="text-gray-700">Product features will be displayed here</li>
+                <li className="text-gray-700">
+                  Product features will be displayed here
+                </li>
               </ul>
             </div>
 
@@ -475,14 +686,30 @@ export default function ProductPage() {
               </div>
 
               <div className="flex gap-4">
+                <Button size="lg" className="flex-1">
+                  Buy Now
+                </Button>
                 <Button
                   size="lg"
-                  className="flex-1"
-                  onClick={addToCart}
-                  // disabled={!product.inStock}
+                  variant={productCartData.isInCart ? "outline" : "default"}
+                  onClick={productCartData.isInCart ? handleRemove : handleAdd}
+                  disabled={productCartData.isDisabled}
+                  onMouseEnter={() => setIsHovered(true)}
+                  onMouseLeave={() => setIsHovered(false)}
+                  className={`flex-1 transition-all duration-200 transform active:scale-95 ${
+                    productCartData.isInCart
+                      ? "border-gray-500 text-gray-600 hover:bg-red-50 hover:border-red-500 hover:text-red-600"
+                      : "bg-white hover:bg-gray-200 text-black"
+                  } ${status === "added" ? "bg-gray-500 hover:bg-gray-600" : ""}
+                  ${status === "removed" ? "bg-gray-500 hover:bg-gray-600" : ""}
+                  ${status === "error" ? "bg-red-500 hover:bg-red-600" : ""}`}
                 >
-                  <ShoppingCart className="w-5 h-5 mr-2" />
-                  {addedToCart ? "Added to Cart!" : "Add to Cart"}
+                  <span className="flex items-center justify-center gap-2">
+                    {buttonContent.icon}
+                    <span className="transition-all duration-200">
+                      {buttonContent.text}
+                    </span>
+                  </span>
                 </Button>
                 <Button
                   size="lg"
@@ -516,7 +743,9 @@ export default function ProductPage() {
               </div>
               <div className="flex items-center gap-3">
                 <Shield className="w-5 h-5 text-purple-600" />
-                <span className="text-sm">{product.warranty || 'Warranty information available'}</span>
+                <span className="text-sm">
+                  {product.warranty || "Warranty information available"}
+                </span>
               </div>
             </div>
 
