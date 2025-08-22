@@ -112,9 +112,7 @@ export default function AccountPage() {
       case "profile":
         return <ProfileSection />;
       case "addresses":
-        return (
-          <AddressesSection addresses={addresses} setAddresses={setAddresses} />
-        );
+        return <AddressesSection setAddresses={setAddresses} />;
       case "orders":
         return <OrdersSection orders={orders} />;
       case "wishlist":

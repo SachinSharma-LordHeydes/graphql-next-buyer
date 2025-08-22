@@ -5,14 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Edit2 } from "lucide-react";
 import { useState } from "react";
 
-// Reusable AddressItem (sub-component for AddressesSection)
-// Props: address, onSave
-// Handles its own editing state
 export default function AddressItem({ address, onSave }) {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editedAddress, setEditedAddress] = useState(address);
-
+console.log("address-->",address)
   const handleSave = () => {
+    console.log("editedAddress",editedAddress)
     onSave(editedAddress);
     setIsEditing(false);
   };
@@ -23,19 +21,19 @@ export default function AddressItem({ address, onSave }) {
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <span className="font-medium">{address.label}</span>
+              <span className="font-medium">{address?.label}</span>
               <span
                 className={`px-2 py-1 rounded text-xs ${
-                  address.type === "SHIPPING"
+                  address?.type === "SHIPPING"
                     ? "bg-blue-100 text-blue-800"
-                    : address.type === "BILLING"
+                    : address?.type === "BILLING"
                     ? "bg-green-100 text-green-800"
                     : "bg-gray-100 text-gray-800"
                 }`}
               >
-                {address.type}
+                {address?.type}
               </span>
-              {address.isDefault && (
+              {address?.isDefault && (
                 <span className="px-2 py-1 bg-primary/10 text-primary rounded text-xs">
                   Default
                 </span>
@@ -46,18 +44,18 @@ export default function AddressItem({ address, onSave }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Input
                     placeholder="Address Line 1"
-                    defaultValue={address.line1}
+                    defaultValue={address?.line1}
                   />
                   <Input
                     placeholder="Address Line 2"
-                    defaultValue={address.line2 || ""}
+                    defaultValue={address?.line2 || ""}
                   />
-                  <Input placeholder="City" defaultValue={address.city} />
-                  <Input placeholder="State" defaultValue={address.state} />
-                  <Input placeholder="Country" defaultValue={address.country} />
+                  <Input placeholder="City" defaultValue={address?.city} />
+                  <Input placeholder="State" defaultValue={address?.state} />
+                  <Input placeholder="Country" defaultValue={address?.country} />
                   <Input
                     placeholder="Postal Code"
-                    defaultValue={address.postalCode}
+                    defaultValue={address?.postalCode}
                   />
                 </div>
                 <div className="flex gap-2">
@@ -78,13 +76,13 @@ export default function AddressItem({ address, onSave }) {
               </div>
             ) : (
               <div className="text-sm text-muted-foreground">
-                <p>{address.line1}</p>
-                {address.line2 && <p>{address.line2}</p>}
+                <p>{address?.line1}</p>
+                {address?.line2 && <p>{address?.line2}</p>}
                 <p>
-                  {address.city}, {address.state} {address.postalCode}
+                  {address?.city}, {address?.state} {address?.postalCode}
                 </p>
-                <p>{address.country}</p>
-                {address.phone && <p>Phone: {address.phone}</p>}
+                <p>{address?.country}</p>
+                {address?.phone && <p>Phone: {address?.phone}</p>}
               </div>
             )}
           </div>

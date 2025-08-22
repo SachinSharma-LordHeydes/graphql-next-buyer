@@ -41,6 +41,7 @@ export const addressTypeDefs = gql`
   }
 
   input UpdateAddressInput {
+    id: ID!
     type: String
     label: String
     line1: String
@@ -54,8 +55,8 @@ export const addressTypeDefs = gql`
   }
 
   extend type Query {
-    getAddress: String!
-    getAddressOfUser: String!
+    getAddress: [Address!]!
+    getAddressOfUser: [Address]
   }
 
   extend type Mutation {

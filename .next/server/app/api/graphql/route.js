@@ -1,7 +1,7 @@
 const CHUNK_PUBLIC_PATH = "server/app/api/graphql/route.js";
 const runtime = require("../../../chunks/[turbopack]_runtime.js");
 runtime.loadChunk("server/chunks/node_modules_@clerk_nextjs_dist_esm_server_fs_middleware-location_700eb983.js");
-runtime.loadChunk("server/chunks/[root-of-the-server]__c9175050._.js");
+runtime.loadChunk("server/chunks/[root-of-the-server]__101f7467._.js");
 runtime.loadChunk("server/chunks/node_modules_next_bb720b03._.js");
 runtime.loadChunk("server/chunks/node_modules_graphql_09ac3c55._.js");
 runtime.loadChunk("server/chunks/node_modules_@graphql-tools_utils_esm_d129e018._.js");

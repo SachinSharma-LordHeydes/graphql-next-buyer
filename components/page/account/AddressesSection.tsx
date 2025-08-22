@@ -1,10 +1,24 @@
-import { useState } from "react";
+import { GET_ADDRESS_OF_USER } from "@/client/address/address.mutations";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import AddressItem from "./AddressItem";
+import { useQuery } from "@apollo/client";
+import { useState } from "react";
 import AddAddressForm from "./AddAddressForm";
+import AddressItem from "./AddressItem";
 
-export default function AddressesSection({ addresses, setAddresses }) {
+export default function AddressesSection({ setAddresses }) {
+  const {
+    data: addressOfUser,
+    loading: addressOfUserLoading,
+    error: addressOfUserError,
+  } = useQuery(GET_ADDRESS_OF_USER);
+
+  const addresses = addressOfUser?.getAddressOfUser;
+
+  if (addressOfUserLoading) console.log("loading");
+  if (addressOfUserLoading) console.log(`${addressOfUserError}`);
+
+  console.log("addressOfUser", addressOfUser);
   const [isAdding, setIsAdding] = useState(false);
 
   return (
@@ -27,19 +41,20 @@ export default function AddressesSection({ addresses, setAddresses }) {
         )}
 
         <div className="space-y-4">
-          {addresses.map((address) => (
-            <AddressItem
-              key={address.id}
-              address={address}
-              onSave={(updatedAddress) => {
-                setAddresses(
-                  addresses.map((a) =>
-                    a.id === updatedAddress.id ? updatedAddress : a
-                  )
-                );
-              }}
-            />
-          ))}
+          {!addressOfUserLoading &&
+            addresses?.map((address) => (
+              <AddressItem
+                key={address.id}
+                address={address}
+                onSave={(updatedAddress) => {
+                  setAddresses(
+                    addresses?.map((a) =>
+                      a.id === updatedAddress.id ? updatedAddress : a
+                    )
+                  );
+                }}
+              />
+            ))}
         </div>
       </CardContent>
     </Card>

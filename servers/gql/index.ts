@@ -70,7 +70,8 @@ const resolvers = mergeResolvers([
   categoryResolvers,
   categorySpecificationResolvers,
   cartItemResolvers,
-  userResolvers
+  userResolvers,
+  addressResolvers
 ]);
 
 export const schema = makeExecutableSchema({ typeDefs, resolvers });
