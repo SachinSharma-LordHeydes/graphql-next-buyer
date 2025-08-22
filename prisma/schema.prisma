@@ -78,6 +78,7 @@ enum ImageType {
   PRIMARY
   PROMOTIONAL
 }
+
 enum DiscountType {
   PERCENTAGE
   FIXED_AMOUNT
@@ -100,16 +101,25 @@ enum CouponStatus {
   USED_UP
 }
 
+enum Gender {
+  MALE
+  FEMALE
+  OTHERS
+  NOT_TO_SAY
+}
+
 model User {
-  id        String   @id @default(cuid())
-  clerkId   String   @unique
-  email     String   @unique @db.VarChar(255)
+  id        String    @id @default(cuid())
+  clerkId   String    @unique
+  email     String    @unique @db.VarChar(255)
   firstName String?
   lastName  String?
-  phone     String?  @db.VarChar(20)
-  role      Role     @default(BUYER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  phone     String?   @db.VarChar(20)
+  gender    Gender?
+  dob       DateTime?
+  role      Role      @default(BUYER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   addresses      Address[]       @relation("UserAddresses")
   paymentMethods PaymentMethod[] @relation("UserPayments")
@@ -147,8 +157,6 @@ model Address {
   @@index([userId, type])
   @@map("addresses")
 }
-
-
 
 model CategorySpecification {
   id          String   @id @default(cuid())

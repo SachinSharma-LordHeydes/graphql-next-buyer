@@ -126,7 +126,7 @@ const Navbar = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem>My Account</DropdownMenuItem>
+                <DropdownMenuItem onClick={()=>{router.push("/account")}}>My Account</DropdownMenuItem>
                 <DropdownMenuItem>Orders</DropdownMenuItem>
                 <DropdownMenuItem>Logout</DropdownMenuItem>
               </DropdownMenuContent>

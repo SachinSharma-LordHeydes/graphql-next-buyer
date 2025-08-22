@@ -7,6 +7,13 @@ export const userTypeDefs = gql`
     ADMIN
   }
 
+  enum Gender {
+    MALE
+    FEMALE
+    OTHERS
+    NOT_TO_SAY
+  }
+
   scalar DateTime
 
   type User {
@@ -16,6 +23,8 @@ export const userTypeDefs = gql`
     firstName: String
     lastName: String
     phone: String
+    gender: Gender
+    dob: DateTime
     role: Role!
     createdAt: DateTime!
     updatedAt: DateTime!
@@ -29,5 +38,21 @@ export const userTypeDefs = gql`
     payouts: [Payout!]
     sellerOrders: [SellerOrder!]
     Wishlist: [Wishlist!]
+  }
+
+  input UpdateUserProfileDetailsInput {
+    firstName: String
+    lastName: String
+    phone: String
+    gender: Gender
+    dob: DateTime
+  }
+
+  type Query {
+    getUserProfileDetails: User!
+  }
+
+  type Mutation {
+    updateUserProfileDetails(input: UpdateUserProfileDetailsInput): User!
   }
 `;

@@ -1,11 +1,7 @@
 "use client";
 
-import { useCart } from "@/app/(main)/page";
-import { ADD_TO_CART, REMOVE_FROM_CART } from "@/client/caart/cart.mutations";
-import { GET_CART_PRODUCT_IDS } from "@/client/caart/cart.queries";
 import { GET_PRODUCT_BY_SLUG } from "@/client/product/product.queries";
 import Breadcrumb from "@/components/page/product/Breadcrumb";
-import CartActions from "@/components/page/product/CartActions";
 import DeliveryInfo from "@/components/page/product/DeliveryInfo";
 import ProductGallery from "@/components/page/product/ProductGallery";
 import ProductInfo from "@/components/page/product/ProductInfo";
@@ -15,15 +11,10 @@ import QuantitySelector from "@/components/page/product/QuantitySelector";
 import RelatedProducts from "@/components/page/product/RelatedProducts";
 import SellerInfo from "@/components/page/product/SellerInfo";
 import WishlistShareButtons from "@/components/page/product/WishlistShareButtons";
-import { Button } from "@/components/ui/button";
-import { useMutation, useQuery } from "@apollo/client";
-import {
-  Check,
-  ShoppingCart,
-  X,
-} from "lucide-react";
+import { ProductActions } from "@/components/common/ProductActions";
+import { useQuery } from "@apollo/client";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 // Mock data constants (kept inline for simplicity, can be moved to separate file if data grows)
 const MOCK_PRODUCTS = [
@@ -273,52 +264,11 @@ const mockReviews = [
   },
 ];
 
-type CartStatus =
-  | "idle"
-  | "adding"
-  | "removing"
-  | "added"
-  | "removed"
-  | "error";
-
 export default function ProductPage() {
   const params = useParams();
   const slug = params.slug as string;
   const [quantity, setQuantity] = useState(1);
   const [addedToWishlist, setAddedToWishlist] = useState(false);
-  const [status, setStatus] = useState<CartStatus>("idle");
-  const [isHovered, setIsHovered] = useState(false);
-  const [optimisticCartItems, setOptimisticCartItems] = useState<Set<string>>(new Set());
-
-  const { data: cartData, loading: cartLoading } = useQuery(
-    GET_CART_PRODUCT_IDS,
-    {
-      fetchPolicy: "cache-and-network",
-      errorPolicy: "all",
-      notifyOnNetworkStatusChange: false,
-    }
-  );
-
-  const cartProductIds = useMemo(() => {
-    if (!cartData?.getMyCart) return new Set<string>();
-    return new Set(
-      cartData.getMyCart.map((item: any) => item.variant.product.id)
-    );
-  }, [cartData?.getMyCart]);
-
-  const cartCtx = useCart?.() as
-    | { cartItems?: Set<string>; loading?: boolean }
-    | undefined;
-
-  const cartItems =
-    cartProductIds.size > 0
-      ? cartProductIds
-      : cartCtx?.cartItems ?? new Set<string>();
-  const finalCartLoading = cartLoading || !!cartCtx?.loading;
-
-  useEffect(() => {
-    setOptimisticCartItems(cartItems);
-  }, [cartItems]);
 
   const {
     data: productData,
@@ -330,41 +280,8 @@ export default function ProductPage() {
     },
   });
 
-  const [addToCart] = useMutation(ADD_TO_CART, {
-    refetchQueries: [{ query: GET_CART_PRODUCT_IDS }],
-    onCompleted: () => {
-      setStatus("added");
-      setTimeout(() => setStatus("idle"), 2000);
-    },
-    onError: (error) => {
-      console.error("Add to cart error:", error);
-      setStatus("error");
-      // Revert optimistic update
-      setOptimisticCartItems(cartItems);
-      setTimeout(() => setStatus("idle"), 2000);
-    },
-  });
-
-  const [removeFromCart] = useMutation(REMOVE_FROM_CART, {
-    refetchQueries: [{ query: GET_CART_PRODUCT_IDS }],
-    onCompleted: () => {
-      setStatus("removed");
-      setTimeout(() => setStatus("idle"), 2000);
-    },
-    onError: (error) => {
-      console.error("Remove from cart error:", error);
-      setStatus("error");
-      // Revert optimistic update
-      setOptimisticCartItems(cartItems);
-      setTimeout(() => setStatus("idle"), 2000);
-    },
-  });
-
-  // Extract product data safely
   const product = productData?.getProductBySlug;
 
-  // Define these variables outside of conditional rendering
-  // Use default/fallback values when data isn't available
   const averageRating = useMemo(() => {
     if (!product?.reviews?.length) return 0;
     return (
@@ -409,122 +326,6 @@ export default function ProductPage() {
     );
   }, [product?.images]);
 
-  // Memoize computed cart values - this hook will now ALWAYS run
-  const productCartData = useMemo(() => {
-    const variantId = defaultVariant?.id;
-    const isInCart = product
-      ? optimisticCartItems.has(product.id || "")
-      : false;
-    const isLoading =
-      status === "adding" || status === "removing" || finalCartLoading;
-    const isDisabled = !variantId || isLoading || !inStock;
-
-    return { variantId, isInCart, isLoading, isDisabled };
-  }, [
-    defaultVariant?.id,
-    optimisticCartItems,
-    product?.id,
-    status,
-    finalCartLoading,
-    inStock,
-  ]);
-
-  const handleAdd = useCallback(
-    async (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (productCartData.isDisabled) return;
-
-      // Optimistic update - immediately show as added
-      setOptimisticCartItems((prev) => new Set([...prev, product.id]));
-      setStatus("adding");
-
-      try {
-        await addToCart({
-          variables: {
-            variantId: productCartData.variantId,
-            quantity: quantity,
-          },
-        });
-      } catch (err) {
-        // Error handling is done in onError callback
-      }
-    },
-    [
-      productCartData.isDisabled,
-      productCartData.variantId,
-      addToCart,
-      product?.id,
-      quantity,
-    ]
-  );
-
-  const handleRemove = useCallback(
-    async (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (productCartData.isDisabled) return;
-
-      // Optimistic update - immediately show as removed
-      const newSet = new Set(optimisticCartItems);
-      newSet.delete(product?.id || "");
-      setOptimisticCartItems(newSet);
-      setStatus("removing");
-
-      try {
-        await removeFromCart({
-          variables: { variantId: productCartData.variantId },
-        });
-      } catch (err) {
-        // Error handling is done in onError callback
-      }
-    },
-    [
-      productCartData.isDisabled,
-      removeFromCart,
-      productCartData.variantId,
-      product?.id,
-      optimisticCartItems,
-    ]
-  );
-
-  // Button content based on status
-  const getButtonContent = () => {
-    switch (status) {
-      case "adding":
-        return {
-          text: "Adding...",
-          icon: <ShoppingCart className="w-5 h-5 animate-spin" />,
-        };
-      case "removing":
-        return {
-          text: "Removing...",
-          icon: <X className="w-5 h-5 animate-spin" />,
-        };
-      case "added":
-        return { text: "Added!", icon: <Check className="w-5 h-5" /> };
-      case "removed":
-        return { text: "Removed!", icon: <Check className="w-5 h-5" /> };
-      case "error":
-        return { text: "Try again", icon: <X className="w-5 h-5" /> };
-      default:
-        if (productCartData.isInCart) {
-          return {
-            text: isHovered ? "Remove from Cart" : "In Cart",
-            icon: <Check className="w-5 h-5" />,
-          };
-        }
-        return {
-          text: "Add to Cart",
-          icon: <ShoppingCart className="w-5 h-5" />,
-        };
-    }
-  };
-
-  const buttonContent = getButtonContent();
-
   const toggleWishlist = () => {
     setAddedToWishlist(!addedToWishlist);
   };
@@ -564,24 +365,18 @@ export default function ProductPage() {
 
             <QuantitySelector quantity={quantity} setQuantity={setQuantity} />
             
-            <div className="flex gap-4">
-              <Button size="lg" className="flex-1">
-                Buy Now
-              </Button>
-              <CartActions
-                productCartData={productCartData}
-                status={status}
-                isHovered={isHovered}
-                setIsHovered={setIsHovered}
-                handleAdd={handleAdd}
-                handleRemove={handleRemove}
-                buttonContent={buttonContent}
-              />
-              <WishlistShareButtons
-                addedToWishlist={addedToWishlist}
-                toggleWishlist={toggleWishlist}
-              />
-            </div>
+            <ProductActions
+              productId={product.id || ""}
+              productSlug={slug}
+              variantId={defaultVariant?.id || ""}
+              quantity={quantity}
+              inStock={inStock}
+            />
+            
+            <WishlistShareButtons
+              addedToWishlist={addedToWishlist}
+              toggleWishlist={toggleWishlist}
+            />
             
             <DeliveryInfo warranty={product.warranty} />
             

@@ -1,6 +1,6 @@
 "use client";
 
-import { GET_CART_PRODUCT_IDS } from "@/client/caart/cart.queries";
+import { GET_CART_PRODUCT_IDS } from "@/client/cart/cart.queries";
 import { GET_PRODUCTS } from "@/client/product/product.queries";
 import HeroCarousel from "@/components/page/home/HeroCarousel";
 import { IProduct } from "@/components/page/home/ProductCard";

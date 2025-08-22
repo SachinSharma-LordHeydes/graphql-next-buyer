@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 17, "column": 0}, "map": {"version":3,"sources":["file:///D:/projects/dai/buyer/app/%28auth%29/sign-in/%5B%5B...sign-in%5D%5D/page.tsx"],"sourcesContent":["import { SignIn } from \"@clerk/nextjs\";\n\nexport default function Page() {\n  return (\n    <SignIn \n      routing=\"path\"\n      path=\"/sign-in\"\n      signUpUrl=\"/sign-up\"\n      // fallbackRedirectUrl=\"/profile_setup\"\n      // forceRedirectUrl=\"/profile_setup\"\n    />\n  );\n}\n"],"names":[],"mappings":";;;;AAAA;;;AAEe,SAAS;IACtB,qBACE,8OAAC,sLAAA,CAAA,SAAM;QACL,SAAQ;QACR,MAAK;QACL,WAAU;;;;;;AAKhB","debugId":null}}]
+}

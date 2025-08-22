@@ -1,8 +1,8 @@
 "use client";
 
 import { useCart } from "@/app/(main)/page";
-import { ADD_TO_CART, REMOVE_FROM_CART } from "@/client/caart/cart.mutations";
-import { GET_CART_PRODUCT_IDS } from "@/client/caart/cart.queries";
+import { ADD_TO_CART, REMOVE_FROM_CART } from "@/client/cart/cart.mutations";
+import { GET_CART_PRODUCT_IDS } from "@/client/cart/cart.queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMutation } from "@apollo/client";
