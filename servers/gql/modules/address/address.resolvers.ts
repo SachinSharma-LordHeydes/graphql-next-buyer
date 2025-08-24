@@ -21,7 +21,7 @@ export const addressResolvers = {
       if (!userId) throw new Error("user Id not found");
       return prisma.address.findMany({
         where: {
-          userId
+          userId,
         },
         include: {
           user: true,
@@ -124,6 +124,31 @@ export const addressResolvers = {
         return true;
       } catch (error: any) {
         console.log("Error occured while updating address", error.message);
+        console.error(error);
+        return false;
+      }
+    },
+    deleteAddressById: async (
+      _: any,
+      { id }: { id: string },
+      ctx: GraphQLContext
+    ) => {
+      try {
+        const user = requireAuth(ctx);
+        const userId = user.id;
+        if (!userId) throw new Error("user id not found");
+
+        const deleteAddressRespone = await prisma.address.delete({
+          where: {
+            id,
+            userId,
+          },
+        });
+        if (!deleteAddressRespone)
+          throw new Error("Internal server error unable to delete the address");
+        return true;
+      } catch (error: any) {
+        console.log("Error occured while deleting address", error.message);
         console.error(error);
         return false;
       }

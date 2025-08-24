@@ -62,5 +62,6 @@ export const addressTypeDefs = gql`
   extend type Mutation {
     addAddress(input: AddAddressInput): Boolean!
     updateAddress(input: UpdateAddressInput): Boolean!
+    deleteAddressById(id: ID!): Boolean!
   }
 `;

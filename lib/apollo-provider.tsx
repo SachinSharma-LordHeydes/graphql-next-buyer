@@ -1,12 +1,17 @@
-'use client';
+"use client";
 
-import { ApolloClient, ApolloProvider, InMemoryCache, createHttpLink } from '@apollo/client';
-import { setContext } from '@apollo/client/link/context';
-import { useAuth } from '@clerk/nextjs';
-import { useMemo } from 'react';
+import {
+  ApolloClient,
+  ApolloProvider,
+  InMemoryCache,
+  createHttpLink,
+} from "@apollo/client";
+import { setContext } from "@apollo/client/link/context";
+import { useAuth } from "@clerk/nextjs";
+import { useMemo } from "react";
 
 const httpLink = createHttpLink({
-  uri: '/api/graphql',
+  uri: "/api/graphql",
 });
 
 function ApolloWrapper({ children }: { children: React.ReactNode }) {
@@ -18,7 +23,7 @@ function ApolloWrapper({ children }: { children: React.ReactNode }) {
       return {
         headers: {
           ...headers,
-          authorization: token ? `Bearer ${token}` : '',
+          authorization: token ? `Bearer ${token}` : "",
         },
       };
     });
@@ -38,6 +43,9 @@ function ApolloWrapper({ children }: { children: React.ReactNode }) {
               categories: {
                 merge: false,
               },
+              getAddresses: {
+                merge: false,
+              },
             },
           },
           Product: {
@@ -55,15 +63,16 @@ function ApolloWrapper({ children }: { children: React.ReactNode }) {
           },
         },
       }),
+
       defaultOptions: {
         watchQuery: {
-          errorPolicy: 'all',
+          errorPolicy: "all",
           notifyOnNetworkStatusChange: false,
-          fetchPolicy: 'cache-first', // Default to cache-first for better performance
+          fetchPolicy: "cache-first", // Default to cache-first for better performance
         },
         query: {
-          errorPolicy: 'all',
-          fetchPolicy: 'cache-first',
+          errorPolicy: "all",
+          fetchPolicy: "cache-first",
         },
       },
     });

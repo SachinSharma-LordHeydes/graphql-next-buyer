@@ -1,18 +1,20 @@
 import gql from "graphql-tag";
 
-export const GET_ADDRESS_OF_USER = gql`
-  query GetAddressOfUser {
-    getAddressOfUser{
-      type
-      label
-      line1
-      line2
-      city
-      state
-      country
-      postalCode
-      phone
-      isDefault
-    }
+export const ADD_ADDRESS = gql`
+  mutation AddAddress($input: AddAddressInput!) {
+    addAddress(input: $input)
+  }
+`;
+
+export const UPDATE_ADDRESS = gql`
+  mutation UpdateAddress($input: UpdateAddressInput!) {
+    updateAddress(input: $input)
+  }
+`;
+
+
+export const DELETE_ADDRESS_BY_ID = gql`
+  mutation DeleteAddressById($id: ID!) {
+    deleteAddressById(id: $id)
   }
 `;
