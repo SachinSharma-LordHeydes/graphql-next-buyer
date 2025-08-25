@@ -1,15 +1,17 @@
+import { useQuery } from "@apollo/client";
+import { AlertCircle, MapPin, Plus } from "lucide-react";
+import React, { useCallback, useMemo, useState } from "react";
+
 import { GET_ADDRESS_OF_USER } from "@/client/address/address.queries";
+import { AddAddressForm } from "@/components/address";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BaseAddress } from "@/types/address";
-import { useQuery } from "@apollo/client";
-import { AlertCircle, MapPin, Plus } from "lucide-react";
-import React, { useCallback, useMemo, useState } from "react";
-import AddAddressForm from "./AddAddressForm";
 import AddressItem from "./AddressItem";
 
+// Skeleton component for loading state
 const AddressItemSkeleton = React.memo(() => (
   <Card className="border-2">
     <CardContent className="p-4">
@@ -35,223 +37,189 @@ interface AddressesSectionProps {
 }
 
 const AddressesSection = React.memo<AddressesSectionProps>(
-  function AddressesSection({ setAddresses }) {
-    const {
-      data: addressOfUser,
-      loading: addressOfUserLoading,
-      error: addressOfUserError,
-      refetch,
-    } = useQuery(GET_ADDRESS_OF_USER, {
-      errorPolicy: "all",
-      notifyOnNetworkStatusChange: true,
+  ({ setAddresses }) => {
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [addresses, setLocalAddresses] = useState<BaseAddress[]>([]);
+
+    // Query addresses
+    const { data, loading, error, refetch } = useQuery(GET_ADDRESS_OF_USER, {
+      onCompleted: (data) => {
+        const fetchedAddresses = data?.getAddressOfUser || [];
+        setLocalAddresses(fetchedAddresses);
+        setAddresses?.(fetchedAddresses);
+      },
     });
 
-    const [isAdding, setIsAdding] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-    const addresses = useMemo(() => {
-      return (addressOfUser?.getAddressOfUser || []) as BaseAddress[];
-    }, [addressOfUser]);
-    const handleAddNew = useCallback(() => {
-      setIsAdding(true);
-      setError(null);
-    }, []);
-
-    const handleCancelAdd = useCallback(() => {
-      setIsAdding(false);
-      setError(null);
-    }, []);
-
-    const handleAddressSaved = useCallback(
-      (newAddress: BaseAddress) => {
-        setIsAdding(false);
-        setError(null);
-        const updatedAddresses = [...addresses, newAddress];
-        setAddresses?.(updatedAddresses);
-        refetch();
-      },
-      [addresses, setAddresses, refetch]
-    );
-
-    const handleAddressUpdated = useCallback(
-      (updatedAddress: BaseAddress) => {
-        setError(null);
-        const updatedAddresses = addresses.map((a) =>
-          a.id === updatedAddress.id ? updatedAddress : a
+    // Memoized values
+    const sortedAddresses = useMemo(() => {
+      return [...addresses].sort((a, b) => {
+        // Default addresses first
+        if (a.isDefault && !b.isDefault) return -1;
+        if (!a.isDefault && b.isDefault) return 1;
+        // Then by creation date (newest first)
+        return (
+          new Date(b.createdAt || "").getTime() -
+          new Date(a.createdAt || "").getTime()
         );
-        setAddresses?.(updatedAddresses);
+      });
+    }, [addresses]);
+
+    const hasAddresses = useMemo(() => addresses.length > 0, [addresses]);
+    const defaultAddress = useMemo(
+      () => addresses.find((addr) => addr.isDefault),
+      [addresses]
+    );
+
+    // Event handlers
+    const handleAddAddress = useCallback(
+      (newAddress: BaseAddress) => {
+        setLocalAddresses((prev) => [newAddress, ...prev]);
+        setAddresses?.([newAddress, ...addresses]);
+        setShowAddForm(false);
         refetch();
       },
       [addresses, setAddresses, refetch]
     );
 
-    // const handleAddressDeleted = useCallback((addressId: string) => {
-    //   console.log("Delete address:", addressId);
-    //   setError(new Error("Delete functionality not implemented yet"));
-    // }, []);
-
-    const handleAddressDeleted = useCallback(
-      (addressId: string) => {
-        const updatedAddresses = addresses.filter((a) => a.id !== addressId);
-        setAddresses?.(updatedAddresses); // update local state if parent cares
-        refetch(); // also refresh from server
+    const handleUpdateAddress = useCallback(
+      (updatedAddress: BaseAddress) => {
+        setLocalAddresses((prev) =>
+          prev.map((addr) =>
+            addr.id === updatedAddress.id ? updatedAddress : addr
+          )
+        );
+        setAddresses?.(
+          addresses.map((addr) =>
+            addr.id === updatedAddress.id ? updatedAddress : addr
+          )
+        );
+        refetch();
       },
       [addresses, setAddresses, refetch]
     );
-    const handleError = useCallback((error: Error) => {
-      setError(error);
-      console.error("Address operation error:", error);
+
+    const handleDeleteAddress = useCallback(
+      (addressId: string) => {
+        setLocalAddresses((prev) =>
+          prev.filter((addr) => addr.id !== addressId)
+        );
+        setAddresses?.(addresses.filter((addr) => addr.id !== addressId));
+        refetch();
+      },
+      [addresses, setAddresses, refetch]
+    );
+
+    const handleShowAddForm = useCallback(() => {
+      setShowAddForm(true);
     }, []);
 
-    const handleRetry = useCallback(() => {
-      setError(null);
-      refetch();
-    }, [refetch]);
-    const hasAddresses = useMemo(() => {
-      return addresses.length > 0;
-    }, [addresses.length]);
+    const handleHideAddForm = useCallback(() => {
+      setShowAddForm(false);
+    }, []);
 
-    const defaultAddress = useMemo(() => {
-      return addresses.find((addr) => addr.isDefault);
-    }, [addresses]);
-    if (addressOfUserLoading) {
+    if (loading) {
+      return (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Addresses
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <AddressItemSkeleton />
+                <AddressItemSkeleton />
+                <AddressItemSkeleton />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    if (error) {
       return (
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
-                My Addresses
-              </CardTitle>
-              <Skeleton className="h-10 w-32" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {Array.from({ length: 2 }).map((_, index) => (
-                <AddressItemSkeleton key={index} />
-              ))}
-            </div>
+          <CardContent className="p-6">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Failed to load addresses. Please try refreshing the page.
+              </AlertDescription>
+            </Alert>
           </CardContent>
         </Card>
       );
     }
 
     return (
-      <Card className="transition-all duration-200">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="w-5 h-5" />
-              My Addresses
-              {hasAddresses && (
-                <span className="text-sm font-normal text-muted-foreground">
-                  ({addresses.length})
-                </span>
-              )}
-            </CardTitle>
-            <Button
-              onClick={handleAddNew}
-              disabled={isAdding}
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Add New Address
-            </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          {/* Global Error Display */}
-          {(addressOfUserError || error) && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="flex items-center justify-between">
-                <span>
-                  {addressOfUserError?.message ||
-                    error?.message ||
-                    "An error occurred"}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRetry}
-                  className="ml-2"
-                >
-                  Retry
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Add Address Form */}
-          {isAdding && (
-            <AddAddressForm
-              onCancel={handleCancelAdd}
-              onSave={handleAddressSaved}
-              onError={handleError}
-            />
-          )}
-
-          {/* Default Address Highlight */}
-          {defaultAddress && !isAdding && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-sm text-amber-800">
-                <MapPin className="w-4 h-4" />
-                <span className="font-medium">Default Address:</span>
-                <span>{defaultAddress.label || "Unnamed Address"}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Address List */}
-          <div className="space-y-4">
-            {hasAddresses
-              ? addresses.map((address) => (
-                  <AddressItem
-                    key={
-                      address.id ||
-                      `address-${address.line1}-${address.postalCode}`
-                    }
-                    address={address}
-                    onSave={handleAddressUpdated}
-                    onDelete={handleAddressDeleted}
-                    disabled={addressOfUserLoading}
-                  />
-                ))
-              : !isAdding && (
-                  <div className="text-center py-12">
-                    <MapPin className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-                      No addresses yet
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Add your first address to get started with orders and
-                      deliveries.
-                    </p>
-                    <Button
-                      onClick={handleAddNew}
-                      className="flex items-center gap-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Your First Address
-                    </Button>
-                  </div>
+      <div className="space-y-4">
+        {/* Header */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Addresses
+                {hasAddresses && (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    ({addresses.length})
+                  </span>
                 )}
-          </div>
+              </CardTitle>
 
-          {/* Loading overlay for operations */}
-          {addressOfUserLoading && hasAddresses && (
-            <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                <p className="text-sm text-muted-foreground">
-                  Updating addresses...
-                </p>
-              </div>
+              <Button
+                onClick={handleShowAddForm}
+                disabled={showAddForm}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Address
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+        </Card>
+
+        {/* Add Address Form */}
+        {showAddForm && (
+          <AddAddressForm
+            context="profile"
+            onSave={handleAddAddress}
+            onCancel={handleHideAddForm}
+            fetchedFormData={defaultAddress}
+          />
+        )}
+
+        {/* Addresses List */}
+        {hasAddresses ? (
+          <div className="space-y-4">
+            {sortedAddresses.map((address) => (
+              <AddressItem
+                key={address.id}
+                address={address}
+                onSave={handleUpdateAddress}
+                onDelete={handleDeleteAddress}
+              />
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No addresses yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Add your first address to get started with faster checkout.
+              </p>
+              <Button onClick={handleShowAddForm}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Address
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     );
   }
 );

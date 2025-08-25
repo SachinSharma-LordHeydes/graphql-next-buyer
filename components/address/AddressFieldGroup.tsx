@@ -1,431 +1,243 @@
-import React, { useMemo, useCallback } from 'react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  AddressTypeSelect, 
-  ProvinceSelect, 
-  CountrySelect 
-} from '@/components/ui/AddressSelect';
-import { AddressFormData } from '@/types/address';
-import { formatPhoneNumber, cleanPhoneNumber } from '@/types/address';
+import {
+  ADDRESS_TYPES,
+  AddressFormData,
+  NEPAL_PROVINCES,
+  getAddressTypeIcon,
+} from "@/types/address";
+import React, { useMemo } from "react";
+import { AddressCheckboxField } from "./atoms/AddressCheckboxField";
+import { AddressField } from "./atoms/AddressField";
+import { AddressSelectField } from "./atoms/AddressSelectField";
 
-// Base Field Props
-interface BaseFieldProps {
-  name: keyof AddressFormData;
-  value: any;
-  onChange: (value: any) => void;
-  error?: string | null;
-  disabled?: boolean;
-  required?: boolean;
-  className?: string;
-}
-
-// Individual Field Components (Memoized)
-const LabelField = React.memo<BaseFieldProps & { placeholder?: string }>(({
-  name,
-  value,
-  onChange,
-  error,
-  disabled,
-  required,
-  className,
-  placeholder = "e.g., Home, Office",
-}) => (
-  <div className={`space-y-1 ${className}`}>
-    <Label htmlFor={name} className="text-sm font-medium">
-      Label {required && <span className="text-red-500">*</span>}
-    </Label>
-    <Input
-      id={name}
-      name={name}
-      type="text"
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      disabled={disabled}
-      required={required}
-      className={error ? "border-red-500 focus:border-red-500" : ""}
-      aria-invalid={!!error}
-      aria-describedby={error ? `${name}-error` : undefined}
-    />
-    {error && (
-      <p id={`${name}-error`} className="text-sm text-red-500">
-        {error}
-      </p>
-    )}
-  </div>
-));
-
-LabelField.displayName = "LabelField";
-
-const AddressLineField = React.memo<BaseFieldProps & { 
-  placeholder: string; 
-  label: string;
-}>(({
-  name,
-  value,
-  onChange,
-  error,
-  disabled,
-  required,
-  className,
-  placeholder,
-  label,
-}) => (
-  <div className={`space-y-1 ${className}`}>
-    <Label htmlFor={name} className="text-sm font-medium">
-      {label} {required && <span className="text-red-500">*</span>}
-    </Label>
-    <Input
-      id={name}
-      name={name}
-      type="text"
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      disabled={disabled}
-      required={required}
-      className={error ? "border-red-500 focus:border-red-500" : ""}
-      aria-invalid={!!error}
-      aria-describedby={error ? `${name}-error` : undefined}
-      maxLength={100}
-    />
-    {error && (
-      <p id={`${name}-error`} className="text-sm text-red-500">
-        {error}
-      </p>
-    )}
-  </div>
-));
-
-AddressLineField.displayName = "AddressLineField";
-
-const CityField = React.memo<BaseFieldProps>(({
-  name,
-  value,
-  onChange,
-  error,
-  disabled,
-  required,
-  className,
-}) => (
-  <div className={`space-y-1 ${className}`}>
-    <Label htmlFor={name} className="text-sm font-medium">
-      City {required && <span className="text-red-500">*</span>}
-    </Label>
-    <Input
-      id={name}
-      name={name}
-      type="text"
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="Enter city"
-      disabled={disabled}
-      required={required}
-      className={error ? "border-red-500 focus:border-red-500" : ""}
-      aria-invalid={!!error}
-      aria-describedby={error ? `${name}-error` : undefined}
-      maxLength={50}
-    />
-    {error && (
-      <p id={`${name}-error`} className="text-sm text-red-500">
-        {error}
-      </p>
-    )}
-  </div>
-));
-
-CityField.displayName = "CityField";
-
-const PostalCodeField = React.memo<BaseFieldProps>(({
-  name,
-  value,
-  onChange,
-  error,
-  disabled,
-  required,
-  className,
-}) => {
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const numericValue = e.target.value.replace(/\D/g, '');
-    if (numericValue.length <= 5) {
-      onChange(numericValue);
-    }
-  }, [onChange]);
-
-  return (
-    <div className={`space-y-1 ${className}`}>
-      <Label htmlFor={name} className="text-sm font-medium">
-        Postal Code {required && <span className="text-red-500">*</span>}
-      </Label>
-      <Input
-        id={name}
-        name={name}
-        type="text"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        value={value || ''}
-        onChange={handleChange}
-        placeholder="44600"
-        disabled={disabled}
-        required={required}
-        className={error ? "border-red-500 focus:border-red-500" : ""}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${name}-error` : undefined}
-        maxLength={5}
-      />
-      {error && (
-        <p id={`${name}-error`} className="text-sm text-red-500">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-});
-
-PostalCodeField.displayName = "PostalCodeField";
-
-const PhoneField = React.memo<BaseFieldProps>(({
-  name,
-  value,
-  onChange,
-  error,
-  disabled,
-  required,
-  className,
-}) => {
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const cleanedValue = cleanPhoneNumber(e.target.value);
-    if (cleanedValue.length <= 10) {
-      onChange(cleanedValue);
-    }
-  }, [onChange]);
-
-  const displayValue = useMemo(() => {
-    return value ? formatPhoneNumber(value) : '';
-  }, [value]);
-
-  return (
-    <div className={`space-y-1 ${className}`}>
-      <Label htmlFor={name} className="text-sm font-medium">
-        Phone {required && <span className="text-red-500">*</span>}
-      </Label>
-      <div className="flex">
-        <span className="inline-flex items-center px-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">
-          +977
-        </span>
-        <Input
-          id={name}
-          name={name}
-          type="tel"
-          inputMode="tel"
-          value={value || ''}
-          onChange={handleChange}
-          placeholder="9812345678"
-          disabled={disabled}
-          required={required}
-          className={`rounded-l-none ${error ? "border-red-500 focus:border-red-500" : ""}`}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${name}-error` : undefined}
-          maxLength={10}
-        />
-      </div>
-      {error && (
-        <p id={`${name}-error`} className="text-sm text-red-500">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-});
-
-PhoneField.displayName = "PhoneField";
-
-const DefaultCheckboxField = React.memo<BaseFieldProps>(({
-  name,
-  value,
-  onChange,
-  disabled,
-  className,
-}) => (
-  <div className={`flex items-center space-x-2 ${className}`}>
-    <Checkbox
-      id={name}
-      name={name}
-      checked={!!value}
-      onCheckedChange={(checked) => onChange(!!checked)}
-      disabled={disabled}
-    />
-    <Label
-      htmlFor={name}
-      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-    >
-      Set as default address
-    </Label>
-  </div>
-));
-
-DefaultCheckboxField.displayName = "DefaultCheckboxField";
-
-// Main AddressFieldGroup Component
 interface AddressFieldGroupProps {
   formData: AddressFormData;
-  errors: Record<keyof AddressFormData, string | null>;
+  errors: Partial<Record<keyof AddressFormData, string>>;
   onFieldChange: (field: keyof AddressFormData, value: any) => void;
   disabled?: boolean;
-  layout?: 'grid' | 'stack';
+  layout?: "grid" | "vertical";
   showTypeField?: boolean;
   showDefaultCheckbox?: boolean;
   className?: string;
 }
 
-export const AddressFieldGroup = React.memo<AddressFieldGroupProps>(({
-  formData,
-  errors,
-  onFieldChange,
-  disabled = false,
-  layout = 'grid',
-  showTypeField = true,
-  showDefaultCheckbox = true,
-  className = "",
-}) => {
-  // Memoize grid layout class
-  const layoutClass = useMemo(() => {
-    return layout === 'grid' 
-      ? 'grid grid-cols-1 md:grid-cols-2 gap-4' 
-      : 'space-y-4';
-  }, [layout]);
+// Memoized address type options
+const addressTypeOptions = ADDRESS_TYPES.map((type) => ({
+  value: type,
+  label: type.charAt(0) + type.slice(1).toLowerCase(),
+  icon: getAddressTypeIcon(type),
+  description: `Use for ${type.toLowerCase()} purposes`,
+}));
 
-  // Memoize field props to prevent unnecessary re-renders
-  const fieldProps = useMemo(() => {
-    return Object.keys(formData).reduce((acc, field) => {
-      const fieldName = field as keyof AddressFormData;
-      acc[fieldName] = {
-        name: fieldName,
-        value: formData[fieldName],
-        onChange: (value: any) => onFieldChange(fieldName, value),
-        error: errors[fieldName],
-        disabled,
-      };
-      return acc;
-    }, {} as Record<keyof AddressFormData, BaseFieldProps>);
-  }, [formData, errors, onFieldChange, disabled]);
+// Memoized province options
+const provinceOptions = NEPAL_PROVINCES.map((province) => ({
+  value: province,
+  label: province,
+}));
 
-  return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Type and Label Row */}
-      {showTypeField && (
-        <div className={layoutClass}>
-          <LabelField {...fieldProps.label} className="" />
-          <div className="space-y-1">
-            <Label htmlFor="type" className="text-sm font-medium">
-              Address Type <span className="text-red-500">*</span>
-            </Label>
-            <AddressTypeSelect
+// Memoized country options
+const countryOptions = [
+  { value: "NP", label: "Nepal" },
+  { value: "IN", label: "India" },
+  { value: "CN", label: "China" },
+  { value: "BD", label: "Bangladesh" },
+];
+
+export const AddressFieldGroup = React.memo<AddressFieldGroupProps>(
+  ({
+    formData,
+    errors,
+    onFieldChange,
+    disabled = false,
+    layout = "grid",
+    showTypeField = true,
+    showDefaultCheckbox = true,
+    className = "",
+  }) => {
+    // Memoize layout class
+    const layoutClass = useMemo(() => {
+      return layout === "grid"
+        ? "grid grid-cols-1 md:grid-cols-2 gap-4"
+        : "space-y-4";
+    }, [layout]);
+
+    // Memoize field change handlers to prevent unnecessary re-renders
+    const fieldHandlers = useMemo(
+      () => ({
+        label: (value: string) => onFieldChange("label", value),
+        line1: (value: string) => onFieldChange("line1", value),
+        line2: (value: string) => onFieldChange("line2", value),
+        city: (value: string) => onFieldChange("city", value),
+        state: (value: string) => onFieldChange("state", value),
+        country: (value: string) => onFieldChange("country", value),
+        postalCode: (value: string) => onFieldChange("postalCode", value),
+        phone: (value: string) => onFieldChange("phone", value),
+        type: (value: string) => onFieldChange("type", value),
+        isDefault: (value: boolean) => onFieldChange("isDefault", value),
+      }),
+      [onFieldChange]
+    );
+
+    return (
+      <div className={`space-y-4 ${className}`}>
+        {/* Address Type and Label */}
+        {showTypeField && (
+          <div className={layoutClass}>
+            <AddressField
+              name="label"
+              label="Address Label"
+              value={formData.label}
+              onChange={fieldHandlers.label}
+              error={errors.label}
+              disabled={disabled}
+              placeholder="Home, Office, etc."
+              maxLength={50}
+            />
+
+            <AddressSelectField
               name="type"
+              label="Address Type"
               value={formData.type}
-              onValueChange={(value) => onFieldChange('type', value)}
+              onValueChange={fieldHandlers.type}
+              options={addressTypeOptions}
               error={errors.type}
               disabled={disabled}
-              showIcons={true}
+              required
+              showIcons
             />
           </div>
+        )}
+
+        {/* Address Lines */}
+        <div className={layoutClass}>
+          <AddressField
+            name="line1"
+            label="Address Line 1"
+            value={formData.line1}
+            onChange={fieldHandlers.line1}
+            error={errors.line1}
+            disabled={disabled}
+            required
+            placeholder="House number, street name, area"
+            maxLength={100}
+          />
+
+          <AddressField
+            name="line2"
+            label="Address Line 2"
+            value={formData.line2}
+            onChange={fieldHandlers.line2}
+            error={errors.line2}
+            disabled={disabled}
+            placeholder="Apartment, suite, landmark (optional)"
+            maxLength={100}
+          />
         </div>
-      )}
 
-      {/* Address Lines */}
-      <div className={layoutClass}>
-        <AddressLineField
-          {...fieldProps.line1}
-          label="Address Line 1"
-          placeholder="House number, street name, area"
-          required
-        />
-        <AddressLineField
-          {...fieldProps.line2}
-          label="Address Line 2"
-          placeholder="Apartment, suite, landmark (optional)"
-          required={false}
-        />
-      </div>
+        {/* City and Province */}
+        <div className={layoutClass}>
+          <AddressField
+            name="city"
+            label="City"
+            value={formData.city}
+            onChange={fieldHandlers.city}
+            error={errors.city}
+            disabled={disabled}
+            required
+            placeholder="Enter city name"
+            maxLength={50}
+          />
 
-      {/* Location Fields */}
-      <div className={layoutClass}>
-        <CityField {...fieldProps.city} required />
-        <div className="space-y-1">
-          <Label htmlFor="state" className="text-sm font-medium">
-            Province <span className="text-red-500">*</span>
-          </Label>
-          <ProvinceSelect
+          <AddressSelectField
             name="state"
+            label="Province"
             value={formData.state}
-            onValueChange={(value) => onFieldChange('state', value)}
+            onValueChange={fieldHandlers.state}
+            options={provinceOptions}
             error={errors.state}
             disabled={disabled}
+            required
+            placeholder="Select province"
           />
         </div>
-      </div>
 
-      {/* Postal Code and Country */}
-      <div className={layoutClass}>
-        <PostalCodeField {...fieldProps.postalCode} required />
-        <div className="space-y-1">
-          <Label htmlFor="country" className="text-sm font-medium">
-            Country <span className="text-red-500">*</span>
-          </Label>
-          <CountrySelect
+        {/* Postal Code and Country */}
+        <div className={layoutClass}>
+          <AddressField
+            name="postalCode"
+            label="Postal Code"
+            value={formData.postalCode}
+            onChange={fieldHandlers.postalCode}
+            error={errors.postalCode}
+            disabled={disabled}
+            required
+            placeholder="Enter 5-digit postal code"
+            type="text"
+            minLength={5}
+            maxLength={5}
+          />
+
+          <AddressSelectField
             name="country"
+            label="Country"
             value={formData.country}
-            onValueChange={(value) => onFieldChange('country', value)}
+            onValueChange={fieldHandlers.country}
+            options={countryOptions}
             error={errors.country}
             disabled={disabled}
+            required
+            placeholder="Select country"
           />
         </div>
-      </div>
 
-      {/* Phone Field */}
-      <div className={layout === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
-        <PhoneField {...fieldProps.phone} />
-      </div>
+        {/* Phone Number */}
+        <div className={layoutClass}>
+          <AddressField
+            name="phone"
+            label="Phone Number"
+            value={formData.phone}
+            onChange={fieldHandlers.phone}
+            error={errors.phone}
+            disabled={disabled}
+            placeholder="Enter phone number"
+            type="tel"
+            minLength={10}
+            maxLength={15}
+          />
 
-      {/* Default Checkbox */}
-      {showDefaultCheckbox && (
-        <DefaultCheckboxField {...fieldProps.isDefault} />
-      )}
-    </div>
-  );
-});
+          {/* Spacer for grid layout */}
+          <div className="hidden md:block" />
+        </div>
+
+        {/* Default Address Checkbox */}
+        {showDefaultCheckbox && (
+          <div className="pt-2">
+            <AddressCheckboxField
+              name="isDefault"
+              label="Set as default address"
+              checked={formData.isDefault}
+              onCheckedChange={fieldHandlers.isDefault}
+              error={errors.isDefault}
+              disabled={disabled}
+              description="This address will be used as the default for future orders"
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+);
 
 AddressFieldGroup.displayName = "AddressFieldGroup";
 
-// Specialized field group variants
-export const AddressFieldGroupStacked = React.memo<Omit<AddressFieldGroupProps, 'layout'>>(
-  (props) => <AddressFieldGroup {...props} layout="stack" />
+// Compact version for smaller forms
+export const AddressFieldGroupCompact = React.memo<AddressFieldGroupProps>(
+  ({ showTypeField = false, showDefaultCheckbox = false, ...props }) => (
+    <AddressFieldGroup
+      {...props}
+      showTypeField={showTypeField}
+      showDefaultCheckbox={showDefaultCheckbox}
+    />
+  )
 );
 
-AddressFieldGroupStacked.displayName = "AddressFieldGroupStacked";
-
-export const AddressFieldGroupCompact = React.memo<AddressFieldGroupProps>(({
-  showTypeField = false,
-  showDefaultCheckbox = false,
-  ...props
-}) => (
-  <AddressFieldGroup
-    {...props}
-    showTypeField={showTypeField}
-    showDefaultCheckbox={showDefaultCheckbox}
-  />
-));
-
 AddressFieldGroupCompact.displayName = "AddressFieldGroupCompact";
-
-// Export individual field components for custom layouts
-export {
-  LabelField,
-  AddressLineField,
-  CityField,
-  PostalCodeField,
-  PhoneField,
-  DefaultCheckboxField,
-};

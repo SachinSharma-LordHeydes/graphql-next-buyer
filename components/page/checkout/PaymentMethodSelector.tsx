@@ -1,16 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  CreditCard, 
-  Smartphone, 
-  Building2, 
-  Wallet, 
-  Banknote,
-  Check
-} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Banknote, Building2, Check, CreditCard, Wallet } from "lucide-react";
 
 interface PaymentMethod {
   id: string;
@@ -29,29 +21,20 @@ interface PaymentMethodSelectorProps {
 
 const paymentMethods: PaymentMethod[] = [
   {
-    id: "upi",
-    type: "UPI",
-    name: "UPI",
-    icon: Smartphone,
-    description: "Pay using UPI apps like Google Pay, PhonePe, Paytm",
-    isPopular: true,
-    providers: ["Google Pay", "PhonePe", "Paytm", "BHIM", "Amazon Pay"]
-  },
-  {
     id: "credit_card",
     type: "CREDIT_CARD",
     name: "Credit Card",
     icon: CreditCard,
-    description: "Visa, MasterCard, American Express, RuPay",
-    providers: ["Visa", "MasterCard", "American Express", "RuPay"]
+    description: "Visa, MasterCard, American Express",
+    providers: ["Visa", "MasterCard", "American Express"],
   },
   {
     id: "debit_card",
-    type: "DEBIT_CARD", 
+    type: "DEBIT_CARD",
     name: "Debit Card",
     icon: CreditCard,
     description: "All major debit cards accepted",
-    providers: ["Visa", "MasterCard", "RuPay", "Maestro"]
+    providers: ["Visa", "MasterCard"],
   },
   {
     id: "net_banking",
@@ -59,15 +42,15 @@ const paymentMethods: PaymentMethod[] = [
     name: "Net Banking",
     icon: Building2,
     description: "All major banks supported",
-    providers: ["SBI", "HDFC", "ICICI", "Axis", "Kotak", "PNB"]
+    providers: ["Nabil", "NIC", "Prabhu", "Global IME", "Gurkash Finance"],
   },
   {
     id: "wallet",
     type: "WALLET",
     name: "Digital Wallet",
     icon: Wallet,
-    description: "Paytm, Mobikwik, Freecharge, Amazon Pay",
-    providers: ["Paytm", "Mobikwik", "Freecharge", "Amazon Pay", "Ola Money"]
+    description: "Esewa, Khalti, IME Pay",
+    providers: ["Esewa", "Khalti", "IME Pay"],
   },
   {
     id: "cod",
@@ -75,11 +58,14 @@ const paymentMethods: PaymentMethod[] = [
     name: "Cash on Delivery",
     icon: Banknote,
     description: "Pay when your order is delivered",
-    providers: []
-  }
+    providers: [],
+  },
 ];
 
-export function PaymentMethodSelector({ onSelect, selected }: PaymentMethodSelectorProps) {
+export function PaymentMethodSelector({
+  onSelect,
+  selected,
+}: PaymentMethodSelectorProps) {
   const handleMethodSelect = (method: PaymentMethod) => {
     onSelect(method);
   };
@@ -94,13 +80,13 @@ export function PaymentMethodSelector({ onSelect, selected }: PaymentMethodSelec
         {paymentMethods.map((method) => {
           const Icon = method.icon;
           const isSelected = selected?.id === method.id;
-          
+
           return (
             <Card
               key={method.id}
               className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                isSelected 
-                  ? "ring-2 ring-blue-500 bg-blue-50" 
+                isSelected
+                  ? "ring-2 ring-blue-500 bg-blue-50"
                   : "hover:border-gray-400"
               }`}
               onClick={() => handleMethodSelect(method)}
@@ -108,53 +94,68 @@ export function PaymentMethodSelector({ onSelect, selected }: PaymentMethodSelec
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <div className={`p-2 rounded-lg ${
-                      isSelected ? "bg-blue-100" : "bg-gray-100"
-                    }`}>
-                      <Icon className={`w-6 h-6 ${
-                        isSelected ? "text-blue-600" : "text-gray-600"
-                      }`} />
+                    <div
+                      className={`p-2 rounded-lg ${
+                        isSelected ? "bg-blue-100" : "bg-gray-100"
+                      }`}
+                    >
+                      <Icon
+                        className={`w-6 h-6 ${
+                          isSelected ? "text-blue-600" : "text-gray-600"
+                        }`}
+                      />
                     </div>
-                    
+
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className={`font-semibold ${
-                          isSelected ? "text-blue-900" : "text-gray-900"
-                        }`}>
+                        <h3
+                          className={`font-semibold ${
+                            isSelected ? "text-blue-900" : "text-gray-900"
+                          }`}
+                        >
                           {method.name}
                         </h3>
                         {method.isPopular && (
-                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+                          <Badge
+                            variant="secondary"
+                            className="text-xs bg-green-100 text-green-700"
+                          >
                             Popular
                           </Badge>
                         )}
                       </div>
-                      <p className={`text-sm ${
-                        isSelected ? "text-blue-700" : "text-gray-600"
-                      }`}>
+                      <p
+                        className={`text-sm ${
+                          isSelected ? "text-blue-700" : "text-gray-600"
+                        }`}
+                      >
                         {method.description}
                       </p>
-                      
+
                       {method.providers && method.providers.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
-                          {method.providers.slice(0, 4).map((provider, index) => (
+                          {method.providers
+                            .slice(0, 4)
+                            .map((provider, index) => (
+                              <span
+                                key={provider}
+                                className={`text-xs px-2 py-1 rounded ${
+                                  isSelected
+                                    ? "bg-blue-200 text-blue-800"
+                                    : "bg-gray-200 text-gray-700"
+                                }`}
+                              >
+                                {provider}
+                              </span>
+                            ))}
+                          {method.providers.length > 4 && (
                             <span
-                              key={provider}
                               className={`text-xs px-2 py-1 rounded ${
-                                isSelected 
-                                  ? "bg-blue-200 text-blue-800" 
+                                isSelected
+                                  ? "bg-blue-200 text-blue-800"
                                   : "bg-gray-200 text-gray-700"
                               }`}
                             >
-                              {provider}
-                            </span>
-                          ))}
-                          {method.providers.length > 4 && (
-                            <span className={`text-xs px-2 py-1 rounded ${
-                              isSelected 
-                                ? "bg-blue-200 text-blue-800" 
-                                : "bg-gray-200 text-gray-700"
-                            }`}>
                               +{method.providers.length - 4} more
                             </span>
                           )}
@@ -162,7 +163,7 @@ export function PaymentMethodSelector({ onSelect, selected }: PaymentMethodSelec
                       )}
                     </div>
                   </div>
-                  
+
                   {isSelected && (
                     <div className="flex-shrink-0">
                       <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
@@ -188,7 +189,8 @@ export function PaymentMethodSelector({ onSelect, selected }: PaymentMethodSelec
               Secure Payment
             </h4>
             <p className="text-sm text-green-700">
-              All payments are secured with 256-bit SSL encryption. Your payment information is never stored on our servers.
+              All payments are secured with 256-bit SSL encryption. Your payment
+              information is never stored on our servers.
             </p>
           </div>
         </div>
@@ -198,7 +200,15 @@ export function PaymentMethodSelector({ onSelect, selected }: PaymentMethodSelec
       <div className="bg-gray-50 rounded-lg p-4">
         <h4 className="text-sm font-medium text-gray-900 mb-3">We Accept</h4>
         <div className="flex flex-wrap gap-3">
-          {["Visa", "MasterCard", "American Express", "RuPay", "Google Pay", "PhonePe", "Paytm"].map((brand) => (
+          {[
+            "Visa",
+            "MasterCard",
+            "American Express",
+            "RuPay",
+            "Google Pay",
+            "PhonePe",
+            "Paytm",
+          ].map((brand) => (
             <div
               key={brand}
               className="bg-white px-3 py-2 rounded border text-xs font-medium text-gray-700 shadow-sm"

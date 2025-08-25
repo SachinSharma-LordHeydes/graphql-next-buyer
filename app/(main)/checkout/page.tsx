@@ -1,6 +1,6 @@
 "use client";
 
-import { AddressForm } from "@/components/page/checkout/AddressForm";
+import { AddAddressForm } from "@/components/address";
 import { OrderSummary } from "@/components/page/checkout/OrderSummary";
 import { PaymentForm } from "@/components/page/checkout/PaymentForm";
 import { PaymentMethodSelector } from "@/components/page/checkout/PaymentMethodSelector";
@@ -157,7 +157,7 @@ export default function CheckoutPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <AddressForm onSubmit={handleAddressSubmit} />
+                <AddAddressForm onSave={handleAddressSubmit} context="buy-now" />
               </CardContent>
             </Card>
           )}

@@ -130,7 +130,7 @@ model User {
   payouts        Payout[]        @relation("SellerPayouts")
   sellerOrders   SellerOrder[]   @relation("SellerOrders")
   wishlists      Wishlist[]
-  discountUsage  DiscountUsage[] @relation("UserDiscountUsage") // Add this line
+  discountUsage  DiscountUsage[] @relation("UserDiscountUsage") 
 
   @@index([email, role])
   @@map("users")
@@ -425,7 +425,7 @@ model Order {
   subtotal         Decimal     @db.Money
   tax              Decimal     @default(0) @db.Money
   shippingFee      Decimal     @default(0) @db.Money
-  discount         Decimal     @default(0) @db.Money // Keep for backward compatibility
+  discount         Decimal     @default(0) @db.Money
   total            Decimal     @db.Money
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -435,7 +435,7 @@ model Order {
   payments         Payment[]
   shipments        Shipment[]
   appliedDiscounts AppliedDiscount[] // Add this line
-  discountUsage    DiscountUsage[] // Add this line
+  discountUsage    DiscountUsage[] 
 
   @@index([buyerId, status])
   @@index([createdAt])

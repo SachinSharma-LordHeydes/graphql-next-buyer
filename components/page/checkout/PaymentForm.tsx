@@ -1,22 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { 
-  CreditCard, 
-  Calendar, 
-  Lock, 
-  User, 
-  Building2,
-  Smartphone,
-  Wallet,
+import {
   AlertCircle,
+  Building2,
   CheckCircle,
-  Loader2
+  CreditCard,
+  Loader2,
+  Lock,
+  Smartphone,
+  User,
 } from "lucide-react";
+import { useState } from "react";
 
 interface PaymentMethod {
   id: string;
@@ -32,7 +28,12 @@ interface PaymentFormProps {
   amount: number;
 }
 
-export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: PaymentFormProps) {
+export function PaymentForm({
+  paymentMethod,
+  onSubmit,
+  isProcessing,
+  amount,
+}: PaymentFormProps) {
   const [formData, setFormData] = useState({
     // Card details
     cardNumber: "",
@@ -52,11 +53,11 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
@@ -72,7 +73,8 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
     if (!formData.expiryMonth) newErrors.expiryMonth = "Month is required";
     if (!formData.expiryYear) newErrors.expiryYear = "Year is required";
     if (!formData.cvv) newErrors.cvv = "CVV is required";
-    if (!formData.cardHolderName.trim()) newErrors.cardHolderName = "Cardholder name is required";
+    if (!formData.cardHolderName.trim())
+      newErrors.cardHolderName = "Cardholder name is required";
 
     // Validate expiry date
     if (formData.expiryMonth && formData.expiryYear) {
@@ -82,7 +84,10 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
       const expMonth = parseInt(formData.expiryMonth);
       const expYear = parseInt(formData.expiryYear);
 
-      if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
+      if (
+        expYear < currentYear ||
+        (expYear === currentYear && expMonth < currentMonth)
+      ) {
         newErrors.expiryMonth = "Card has expired";
       }
     }
@@ -154,7 +159,7 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (paymentMethod.type === "CASH_ON_DELIVERY") {
       // No validation needed for COD
       onSubmit({ method: paymentMethod.type });
@@ -182,7 +187,7 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
   };
 
   const formatPrice = (priceInCents: number) => {
-    return `₹${(priceInCents / 100).toLocaleString('en-IN')}`;
+    return `₹${(priceInCents / 100).toLocaleString("en-IN")}`;
   };
 
   // Render different forms based on payment method
@@ -200,10 +205,17 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
                 <Input
                   type="text"
                   value={formData.cardNumber}
-                  onChange={(e) => handleInputChange("cardNumber", formatCardNumber(e.target.value))}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "cardNumber",
+                      formatCardNumber(e.target.value)
+                    )
+                  }
                   placeholder="1234 5678 9012 3456"
                   maxLength={19}
-                  className={`pl-10 ${errors.cardNumber ? "border-red-500" : ""}`}
+                  className={`pl-10 ${
+                    errors.cardNumber ? "border-red-500" : ""
+                  }`}
                 />
                 <CreditCard className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               </div>
@@ -219,55 +231,70 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
                 </label>
                 <select
                   value={formData.expiryMonth}
-                  onChange={(e) => handleInputChange("expiryMonth", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("expiryMonth", e.target.value)
+                  }
                   className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.expiryMonth ? "border-red-500" : ""
                   }`}
                 >
                   <option value="">MM</option>
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                    <option key={month} value={month.toString().padStart(2, "0")}>
+                    <option
+                      key={month}
+                      value={month.toString().padStart(2, "0")}
+                    >
                       {month.toString().padStart(2, "0")}
                     </option>
                   ))}
                 </select>
                 {errors.expiryMonth && (
-                  <p className="text-red-500 text-sm mt-1">{errors.expiryMonth}</p>
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.expiryMonth}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Year *
-                </label>
+                <label className="block text-sm font-medium mb-2">Year *</label>
                 <select
                   value={formData.expiryYear}
-                  onChange={(e) => handleInputChange("expiryYear", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("expiryYear", e.target.value)
+                  }
                   className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.expiryYear ? "border-red-500" : ""
                   }`}
                 >
                   <option value="">YY</option>
-                  {Array.from({ length: 20 }, (_, i) => new Date().getFullYear() + i).map((year) => (
+                  {Array.from(
+                    { length: 20 },
+                    (_, i) => new Date().getFullYear() + i
+                  ).map((year) => (
                     <option key={year} value={year.toString().slice(-2)}>
                       {year.toString().slice(-2)}
                     </option>
                   ))}
                 </select>
                 {errors.expiryYear && (
-                  <p className="text-red-500 text-sm mt-1">{errors.expiryYear}</p>
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.expiryYear}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  CVV *
-                </label>
+                <label className="block text-sm font-medium mb-2">CVV *</label>
                 <div className="relative">
                   <Input
                     type="text"
                     value={formData.cvv}
-                    onChange={(e) => handleInputChange("cvv", e.target.value.replace(/\D/g, ""))}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "cvv",
+                        e.target.value.replace(/\D/g, "")
+                      )
+                    }
                     placeholder="123"
                     maxLength={4}
                     className={`pl-10 ${errors.cvv ? "border-red-500" : ""}`}
@@ -288,14 +315,23 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
                 <Input
                   type="text"
                   value={formData.cardHolderName}
-                  onChange={(e) => handleInputChange("cardHolderName", e.target.value.toUpperCase())}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "cardHolderName",
+                      e.target.value.toUpperCase()
+                    )
+                  }
                   placeholder="JOHN DOE"
-                  className={`pl-10 ${errors.cardHolderName ? "border-red-500" : ""}`}
+                  className={`pl-10 ${
+                    errors.cardHolderName ? "border-red-500" : ""
+                  }`}
                 />
                 <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               </div>
               {errors.cardHolderName && (
-                <p className="text-red-500 text-sm mt-1">{errors.cardHolderName}</p>
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.cardHolderName}
+                </p>
               )}
             </div>
           </div>
@@ -305,14 +341,14 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2">
-                UPI ID *
-              </label>
+              <label className="block text-sm font-medium mb-2">UPI ID *</label>
               <div className="relative">
                 <Input
                   type="text"
                   value={formData.upiId}
-                  onChange={(e) => handleInputChange("upiId", e.target.value.toLowerCase())}
+                  onChange={(e) =>
+                    handleInputChange("upiId", e.target.value.toLowerCase())
+                  }
                   placeholder="yourname@paytm"
                   className={`pl-10 ${errors.upiId ? "border-red-500" : ""}`}
                 />
@@ -327,9 +363,12 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
               <div className="flex items-center space-x-2">
                 <AlertCircle className="w-5 h-5 text-blue-600" />
                 <div>
-                  <h4 className="text-sm font-medium text-blue-900">UPI Payment</h4>
+                  <h4 className="text-sm font-medium text-blue-900">
+                    UPI Payment
+                  </h4>
                   <p className="text-sm text-blue-700">
-                    You will be redirected to your UPI app to complete the payment.
+                    You will be redirected to your UPI app to complete the
+                    payment.
                   </p>
                 </div>
               </div>
@@ -347,7 +386,9 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
               <div className="relative">
                 <select
                   value={formData.bankName}
-                  onChange={(e) => handleInputChange("bankName", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("bankName", e.target.value)
+                  }
                   className={`w-full pl-10 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.bankName ? "border-red-500" : ""
                   }`}
@@ -375,9 +416,12 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
               <div className="flex items-center space-x-2">
                 <AlertCircle className="w-5 h-5 text-yellow-600" />
                 <div>
-                  <h4 className="text-sm font-medium text-yellow-900">Net Banking</h4>
+                  <h4 className="text-sm font-medium text-yellow-900">
+                    Net Banking
+                  </h4>
                   <p className="text-sm text-yellow-700">
-                    You will be redirected to your bank's website to complete the payment.
+                    You will be redirected to your bank's website to complete
+                    the payment.
                   </p>
                 </div>
               </div>
@@ -394,13 +438,18 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
               </label>
               <div className="grid gap-3">
                 {paymentMethod.providers?.map((provider) => (
-                  <label key={provider} className="flex items-center cursor-pointer">
+                  <label
+                    key={provider}
+                    className="flex items-center cursor-pointer"
+                  >
                     <input
                       type="radio"
                       name="walletProvider"
                       value={provider}
                       checked={formData.walletProvider === provider}
-                      onChange={(e) => handleInputChange("walletProvider", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("walletProvider", e.target.value)
+                      }
                       className="mr-3"
                     />
                     <span className="text-sm font-medium">{provider}</span>
@@ -408,7 +457,9 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
                 ))}
               </div>
               {errors.walletProvider && (
-                <p className="text-red-500 text-sm mt-1">{errors.walletProvider}</p>
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.walletProvider}
+                </p>
               )}
             </div>
 
@@ -418,18 +469,29 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
                   Mobile Number *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-3 text-sm text-gray-500">+91</span>
+                  <span className="absolute left-3 top-3 text-sm text-gray-500">
+                    +91
+                  </span>
                   <Input
                     type="tel"
                     value={formData.walletNumber}
-                    onChange={(e) => handleInputChange("walletNumber", e.target.value.replace(/\D/g, ""))}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "walletNumber",
+                        e.target.value.replace(/\D/g, "")
+                      )
+                    }
                     placeholder="9876543210"
                     maxLength={10}
-                    className={`pl-12 ${errors.walletNumber ? "border-red-500" : ""}`}
+                    className={`pl-12 ${
+                      errors.walletNumber ? "border-red-500" : ""
+                    }`}
                   />
                 </div>
                 {errors.walletNumber && (
-                  <p className="text-red-500 text-sm mt-1">{errors.walletNumber}</p>
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.walletNumber}
+                  </p>
                 )}
               </div>
             )}
@@ -441,14 +503,21 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
           <div className="space-y-6">
             <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
               <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-green-900 mb-2">Cash on Delivery</h3>
+              <h3 className="text-lg font-semibold text-green-900 mb-2">
+                Cash on Delivery
+              </h3>
               <p className="text-sm text-green-700 mb-4">
-                You can pay in cash when your order is delivered to your doorstep.
+                You can pay in cash when your order is delivered to your
+                doorstep.
               </p>
               <div className="bg-white rounded-lg p-4 border border-green-200">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600">Amount to pay on delivery:</span>
-                  <span className="font-bold text-green-600">{formatPrice(amount)}</span>
+                  <span className="text-gray-600">
+                    Amount to pay on delivery:
+                  </span>
+                  <span className="font-bold text-green-600">
+                    {formatPrice(amount)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -457,10 +526,15 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
               <div className="flex items-start space-x-2">
                 <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-medium text-blue-900 mb-1">Important Notes:</h4>
+                  <h4 className="text-sm font-medium text-blue-900 mb-1">
+                    Important Notes:
+                  </h4>
                   <ul className="text-sm text-blue-700 space-y-1">
                     <li>• Please keep the exact amount ready</li>
-                    <li>• Our delivery partner will carry a POS machine for card payments</li>
+                    <li>
+                      • Our delivery partner will carry a POS machine for card
+                      payments
+                    </li>
                     <li>• COD orders may take 1-2 days longer to process</li>
                   </ul>
                 </div>
@@ -481,7 +555,9 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
       <div className="border-t pt-6">
         <div className="flex items-center justify-between mb-4">
           <span className="text-lg font-semibold">Total Amount:</span>
-          <span className="text-2xl font-bold text-blue-600">{formatPrice(amount)}</span>
+          <span className="text-2xl font-bold text-blue-600">
+            {formatPrice(amount)}
+          </span>
         </div>
 
         <Button
@@ -495,10 +571,10 @@ export function PaymentForm({ paymentMethod, onSubmit, isProcessing, amount }: P
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Processing Payment...
             </>
+          ) : paymentMethod.type === "CASH_ON_DELIVERY" ? (
+            "Place Order"
           ) : (
-            paymentMethod.type === "CASH_ON_DELIVERY" 
-              ? "Place Order" 
-              : `Pay ${formatPrice(amount)}`
+            `Pay ${formatPrice(amount)}`
           )}
         </Button>
       </div>
